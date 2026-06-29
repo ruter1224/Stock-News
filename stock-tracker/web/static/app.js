@@ -40,8 +40,6 @@ async function api(path, opts) {
 }
 
 // ====== Dashboard ======
-let _pricesFetchedOnStartup = false;
-
 async function loadDashboard() {
     const data = await api('/api/portfolio');
     if (!data) return;
@@ -76,12 +74,6 @@ async function loadDashboard() {
     }
 
     renderPieChart(data.stocks);
-
-    // Fetch prices once on startup
-    if (!_pricesFetchedOnStartup && data.count > 0) {
-        _pricesFetchedOnStartup = true;
-        refreshPrices();
-    }
 }
 
 function renderPieChart(stocks) {
@@ -184,7 +176,7 @@ async function loadDetail(code, containerId) {
             <table class="data-table">
                 <thead><tr>
                     <th>日期</th><th>類型</th><th class="right">價格</th><th class="right">股數</th>
-                    <th class="right">金額</th><th class="right">手續費</th><th class="right">稅</th><th></th>
+                    <th class="right">金額</th><th class="right">手續費</th><th class="right">稅</th><th>備註</th><th></th>
                 </tr></thead>
                 <tbody>
                     ${data.history.map((tx, i) => {
@@ -199,6 +191,7 @@ async function loadDetail(code, containerId) {
                             <td class="right">${fmt(tx.total_amount)}</td>
                             <td class="right">${tx.fee ? fmt(tx.fee) : '-'}</td>
                             <td class="right">${tx.tax ? fmt(tx.tax) : '-'}</td>
+                            <td style="font-size:12px;color:var(--gray-500);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${tx.remark || ''}">${tx.remark || ''}</td>
                             <td>${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteTransaction('${code}', ${i})">&#x2716;</button>` : ''}</td>
                         </tr>`;
                     }).join('')}
@@ -440,21 +433,25 @@ async function loadConfig() {
     document.getElementById('s-tax_listed').value = data.tax_rate_listed;
     document.getElementById('s-tax_otc').value = data.tax_rate_otc;
     document.getElementById('s-tax_etf').value = data.tax_rate_etf;
+    document.getElementById('s-reinvest_mode').value = data.reinvest_mode || 'direct';
 }
 
 async function saveConfig() {
+    const reinvestMode = document.getElementById('s-reinvest_mode').value;
     const result = await api('/api/config', { method: 'PUT', body: JSON.stringify({
         fee_rate: parseFloat(document.getElementById('s-fee_rate').value),
         tax_rate_listed: parseFloat(document.getElementById('s-tax_listed').value),
         tax_rate_otc: parseFloat(document.getElementById('s-tax_otc').value),
         tax_rate_etf: parseFloat(document.getElementById('s-tax_etf').value),
+        reinvest_mode: reinvestMode,
     })});
     if (result) showToast(result.message, 'success');
 }
 
 async function resetConfig() {
     const result = await api('/api/config', { method: 'PUT', body: JSON.stringify({
-        fee_rate: 0.001425, tax_rate_listed: 0.003, tax_rate_otc: 0.003, tax_rate_etf: 0.001
+        fee_rate: 0.001425, tax_rate_listed: 0.003, tax_rate_otc: 0.003, tax_rate_etf: 0.001,
+        reinvest_mode: 'direct'
     })});
     if (result) { loadConfig(); showToast('已恢復預設值', 'success'); }
 }

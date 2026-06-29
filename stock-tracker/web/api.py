@@ -113,6 +113,7 @@ def get_stock_detail(code):
             "total_amount": tx.total_amount,
             "fee": tx.fee,
             "tax": tx.tax,
+            "remark": tx.remark,
         })
     return jsonify({
         "code": code,
@@ -243,7 +244,6 @@ def refresh_prices():
     if not codes:
         return jsonify({"error": "投資組合為空"}), 400
     init_price_cache(str(DATA_DIR))
-    clear_price_cache()
     prices = fetch_prices(codes)
     ok = sum(1 for v in prices.values() if v[0] is not None)
     return jsonify({"message": f"成功更新 {ok}/{len(codes)} 檔股價", "ok": ok, "total": len(codes)})
@@ -256,6 +256,7 @@ def get_config():
         "tax_rate_listed": cfg.tax_rate_listed,
         "tax_rate_otc": cfg.tax_rate_otc,
         "tax_rate_etf": cfg.tax_rate_etf,
+        "reinvest_mode": cfg.reinvest_mode,
     })
 
 
@@ -267,6 +268,8 @@ def update_config():
         cfg.tax_rate_listed = float(data.get("tax_rate_listed", cfg.tax_rate_listed))
         cfg.tax_rate_otc = float(data.get("tax_rate_otc", cfg.tax_rate_otc))
         cfg.tax_rate_etf = float(data.get("tax_rate_etf", cfg.tax_rate_etf))
+        if "reinvest_mode" in data:
+            cfg.reinvest_mode = data["reinvest_mode"]
         return jsonify({"message": "設定已更新"})
     except ValueError:
         return jsonify({"error": "請輸入有效的數值"}), 400

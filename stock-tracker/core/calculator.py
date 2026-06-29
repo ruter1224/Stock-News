@@ -19,6 +19,8 @@ def buy(state, tx, config):
         avg_cost=avg,
         is_zero_cost=(new_shares > 0 and new_cost == 0),
         history=state.history + [tx],
+        total_dividend_received=state.total_dividend_received,
+        dividend_offset_applied=state.dividend_offset_applied,
     )
 
 
@@ -51,6 +53,8 @@ def sell(state, tx, config):
         avg_cost=avg,
         is_zero_cost=(new_shares > 0 and new_cost == 0),
         history=state.history + [tx],
+        total_dividend_received=state.total_dividend_received,
+        dividend_offset_applied=state.dividend_offset_applied,
     )
 
 
@@ -60,12 +64,49 @@ def dividend_reinvest(state, tx, config):
 
     fee = round(tx.total_amount * config.fee_rate, 2) if tx.fee == 0 else tx.fee
     total_amount = round(tx.price * tx.shares, 2)
-    new_cost = state.total_cost + total_amount + fee
 
     tx.fee = fee
     tx.total_amount = total_amount
 
     new_shares = state.shares + tx.shares
+    
+    # 取得再投資模式
+    mode = getattr(config, 'reinvest_mode', 'direct')
+    
+    if mode == "direct":
+        # 模式 A：直接扣成本，不管有沒有收過股利
+        offset = min(total_amount, state.total_cost)
+        excess = total_amount - offset
+        new_cost = state.total_cost - offset + excess
+        # 備註
+        if state.total_dividend_received == 0:
+            tx.remark = "無對應股利記錄"
+        else:
+            remaining = state.total_dividend_received - state.dividend_offset_applied - offset
+            if remaining > 0:
+                tx.remark = f"已對沖 {offset:,.0f}，剩餘 {remaining:,.0f}"
+            else:
+                tx.remark = f"已對沖 {offset:,.0f}"
+    else:
+        # 模式 B：需有股利才能扣，超過部分當一般買入
+        available = state.total_dividend_received - state.dividend_offset_applied
+        offset = min(total_amount, available, state.total_cost)
+        excess = total_amount - offset
+        new_cost = state.total_cost - offset + excess
+        # 備註
+        if offset == 0:
+            tx.remark = f"無可用股利，全部 {total_amount:,.0f} 計入成本"
+        else:
+            remaining = available - offset
+            if excess > 0:
+                tx.remark = f"已對沖 {offset:,.0f}，超額 {excess:,.0f} 計入成本"
+            elif remaining > 0:
+                tx.remark = f"已對沖 {offset:,.0f}，剩餘 {remaining:,.0f}"
+            else:
+                tx.remark = f"已對沖 {offset:,.0f}"
+    
+    new_div_offset = state.dividend_offset_applied + offset
+    
     avg = new_cost / new_shares if new_shares > 0 else 0.0
 
     return StockState(
@@ -74,6 +115,8 @@ def dividend_reinvest(state, tx, config):
         avg_cost=avg,
         is_zero_cost=(new_shares > 0 and new_cost == 0),
         history=state.history + [tx],
+        total_dividend_received=state.total_dividend_received,
+        dividend_offset_applied=new_div_offset,
     )
 
 
@@ -90,6 +133,8 @@ def stock_dividend(state, tx, config):
         avg_cost=avg,
         is_zero_cost=(new_shares > 0 and state.total_cost == 0),
         history=state.history + [tx],
+        total_dividend_received=state.total_dividend_received,
+        dividend_offset_applied=state.dividend_offset_applied,
     )
 
 
@@ -105,18 +150,23 @@ def init_holding(state, tx, config):
         avg_cost=avg,
         is_zero_cost=(new_cost == 0),
         history=state.history + [tx],
+        total_dividend_received=0.0,
+        dividend_offset_applied=0.0,
     )
 
 
 def dividend(state, tx, config):
     if tx.action != "dividend":
         return state
+    new_div_total = state.total_dividend_received + tx.dividend_total
     return StockState(
         shares=state.shares,
         total_cost=state.total_cost,
         avg_cost=state.avg_cost,
         is_zero_cost=state.is_zero_cost,
         history=state.history + [tx],
+        total_dividend_received=new_div_total,
+        dividend_offset_applied=state.dividend_offset_applied,
     )
 
 

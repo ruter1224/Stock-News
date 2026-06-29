@@ -120,11 +120,24 @@
 <div class="page-title">系統設定</div>
 
 <div class="section-card" style="max-width:450px">
+    <div class="section-card-title">交易費率</div>
     <div class="form-grid">
         <div class="form-label">手續費率</div><input class="form-input" id="s-fee_rate" type="text">
         <div class="form-label">個股交易稅 (上市)</div><input class="form-input" id="s-tax_listed" type="text">
         <div class="form-label">個股交易稅 (上櫃)</div><input class="form-input" id="s-tax_otc" type="text">
         <div class="form-label">ETF 交易稅</div><input class="form-input" id="s-tax_etf" type="text">
+    </div>
+</div>
+
+<div class="section-card" style="max-width:450px">
+    <div class="section-card-title">再投資模式</div>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:8px">選擇股利再投資時如何計算成本</p>
+    <div class="form-grid">
+        <div class="form-label">模式</div>
+        <select class="form-input" id="s-reinvest_mode">
+            <option value="direct">直接扣成本（所有再投資都從成本扣除）</option>
+            <option value="match">需有股利才能扣（最多扣到已收現金股利總額）</option>
+        </select>
     </div>
     <div class="btn-group" style="margin-top:12px">
         <button class="btn btn-primary" onclick="saveConfig()">儲存</button>
