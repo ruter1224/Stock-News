@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.StockTracker" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#2563eb</item>
+        <item name="colorPrimaryDark">#1d4ed8</item>
+        <item name="colorAccent">#2563eb</item>
+        <item name="android:statusBarColor">#2563eb</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

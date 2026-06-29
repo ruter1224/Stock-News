@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from core.models import Transaction
@@ -9,7 +10,11 @@ from data.store import save_portfolio, load_portfolio
 from data.importer import parse_trades_csv, export_trades_csv
 from core.prices import init_cache as init_price_cache, fetch_prices, clear_cache as clear_price_cache
 
-DATA_DIR = Path(__file__).parent / "data"
+_data_dir_env = os.environ.get("STOCK_TRACKER_DATA_DIR")
+if _data_dir_env:
+    DATA_DIR = Path(_data_dir_env) / "data"
+else:
+    DATA_DIR = Path(__file__).parent / "data"
 
 
 def cmd_holding_add(args):

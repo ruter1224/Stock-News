@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block dashboard %}
+<div class="page-title">持有總覽</div>
+
+<div id="dashboard-cards" class="card-grid">
+    <div class="card"><div class="card-label">持股檔數</div><div class="card-value" id="d-count">-</div></div>
+    <div class="card"><div class="card-label">總市值</div><div class="card-value primary" id="d-value">-</div></div>
+    <div class="card"><div class="card-label">總損益</div><div class="card-value" id="d-pl">-</div></div>
+    <div class="card"><div class="card-label">總報酬率</div><div class="card-value" id="d-roi">-</div></div>
+</div>
+
+<div class="action-bar">
+    <button class="btn btn-primary" onclick="refreshPrices()">&#x1F504; 重新整理股價</button>
+    <button class="btn btn-purple" onclick="importCsv()">&#x1F4E5; 匯入 CSV</button>
+    <button class="btn btn-warning" onclick="exportCsv()">&#x1F4E4; 匯出報表</button>
+</div>
+
+<div class="info-row">
+    <div class="info-box">
+        <div class="info-box-title">&#x1F4C8; 零成本統計</div>
+        <div class="info-box-content" id="d-zc">-</div>
+    </div>
+    <div class="info-box">
+        <div class="info-box-title">&#x1F4CA; 持有佔比</div>
+        <div class="info-box-content">
+            <div class="pie-container">
+                <div class="pie-chart" id="pie-chart"></div>
+                <div class="pie-legend" id="pie-legend"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>代碼</th><th>類型</th><th class="right">股數</th><th class="right">均價</th>
+                <th class="right">現價</th><th class="right">市值</th><th class="right">未實現</th>
+                <th class="right">報酬率</th><th class="center">零成本</th>
+            </tr>
+        </thead>
+        <tbody id="d-table-body"></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block stock_detail %}
+<div class="page-title">個股管理</div>
+<div class="action-bar">
+    <button class="btn btn-success" onclick="showHoldingDialog()">&#x1F4C5; 新增個股</button>
+</div>
+<div class="select-wrap" style="margin-bottom:16px">
+    <span>選擇股票：</span>
+    <select id="s-combo" onchange="loadStockDetail()"></select>
+</div>
+<div id="s-detail"></div>
+{% endblock %}
+
+{% block etf_detail %}
+<div class="page-title">ETF 管理</div>
+<div class="action-bar">
+    <button class="btn btn-success" onclick="showHoldingDialog()">&#x1F4C5; 新增 ETF</button>
+</div>
+<div class="select-wrap" style="margin-bottom:16px">
+    <span>選擇股票：</span>
+    <select id="e-combo" onchange="loadEtfDetail()"></select>
+</div>
+<div id="e-detail"></div>
+{% endblock %}
+
+{% block backtest %}
+<div class="page-title">歷史回測</div>
+
+<div class="action-bar">
+    <div class="select-wrap">
+        <span>標的：</span>
+        <select id="bt-code">
+            <option value="">-- 整體投資組合 --</option>
+        </select>
+    </div>
+    <div class="select-wrap">
+        <span>期間：</span>
+        <select id="bt-years">
+            <option value="1">1 年</option>
+            <option value="3">3 年</option>
+            <option value="5" selected>5 年</option>
+            <option value="10">10 年</option>
+        </select>
+    </div>
+    <button class="btn btn-primary" onclick="runBacktest()">&#x1F504; 執行回測</button>
+    <button class="btn btn-warning" onclick="downloadHistory()">&#x1F4E5; 下載歷史股價</button>
+</div>
+
+<div id="bt-history-status"></div>
+<div id="bt-loading" class="loading" style="display:none">&#x23F3; 載入中...</div>
+<div id="bt-metrics" class="card-grid" style="display:none"></div>
+<div id="bt-charts" style="display:none">
+    <div class="chart-container">
+        <div class="chart-title">權益曲線 vs 大盤</div>
+        <canvas id="bt-equity-chart" height="300"></canvas>
+    </div>
+    <div class="chart-container">
+        <div class="chart-title">回撤曲線</div>
+        <canvas id="bt-dd-chart" height="200"></canvas>
+    </div>
+</div>
+<div id="bt-table-container" style="display:none">
+    <div class="section-card-title">詳細回測數據</div>
+    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+        <table class="data-table">
+            <thead><tr><th>日期</th><th class="right">市值</th><th class="right">成本</th><th class="right">報酬率</th><th class="right">DD</th></tr></thead>
+            <tbody id="bt-table-body"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block settings %}
+<div class="page-title">系統設定</div>
+
+<div class="section-card" style="max-width:450px">
+    <div class="form-grid">
+        <div class="form-label">手續費率</div><input class="form-input" id="s-fee_rate" type="text">
+        <div class="form-label">個股交易稅 (上市)</div><input class="form-input" id="s-tax_listed" type="text">
+        <div class="form-label">個股交易稅 (上櫃)</div><input class="form-input" id="s-tax_otc" type="text">
+        <div class="form-label">ETF 交易稅</div><input class="form-input" id="s-tax_etf" type="text">
+    </div>
+    <div class="btn-group" style="margin-top:12px">
+        <button class="btn btn-primary" onclick="saveConfig()">儲存</button>
+        <button class="btn btn-gray" onclick="resetConfig()">恢復預設</button>
+    </div>
+</div>
+
+<hr class="separator">
+
+<div class="section-card" style="max-width:450px">
+    <div class="section-card-title">股價快取管理</div>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:8px">快取目錄：data/cache/</p>
+    <button class="btn btn-warning" onclick="clearCache()">清除快取</button>
+</div>
+{% endblock %}

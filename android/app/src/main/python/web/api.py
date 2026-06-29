@@ -13,7 +13,7 @@ from core.backtest import single_stock_backtest, portfolio_backtest
 
 _data_dir_env = os.environ.get("STOCK_TRACKER_DATA_DIR")
 if _data_dir_env:
-    DATA_DIR = Path(_data_dir_env) / "data"
+    DATA_DIR = Path(_data_dir_env) / "stock-tracker" / "data"
 else:
     DATA_DIR = Path(__file__).parent.parent / "data"
 STATE_FILE = str(DATA_DIR / "state.json")
