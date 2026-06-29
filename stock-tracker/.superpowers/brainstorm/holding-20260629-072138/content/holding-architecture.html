@@ -1,0 +1,119 @@
+<h2>持倉初始化功能設計 (holding)</h2>
+<p class="subtitle">新增 <code>holding add</code> / <code>holding list</code> / <code>holding remove</code> 三個子命令</p>
+
+<div class="mockup" style="margin-top: 1.5rem;">
+  <div class="mockup-header">系統架構流程圖</div>
+  <div class="mockup-body" style="padding: 1.5rem;">
+
+    <!-- CLI Layer -->
+    <div style="border: 2px solid #2563eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #eff6ff;">
+      <div style="font-weight: 700; color: #2563eb; margin-bottom: 0.5rem;">CLI Layer (main.py)</div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <div style="background: #2563eb; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+          <code>holding add</code>
+        </div>
+        <div style="background: #2563eb; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+          <code>holding list</code>
+        </div>
+        <div style="background: #2563eb; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+          <code>holding remove</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #94a3b8; margin: 0.5rem 0;">&#9660; 呼叫下層</div>
+
+    <!-- Portfolio Layer -->
+    <div style="border: 2px solid #059669; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #ecfdf5;">
+      <div style="font-weight: 700; color: #059669; margin-bottom: 0.5rem;">Portfolio Layer (portfolio.py)</div>
+      <div style="font-size: 0.9rem;">
+        <code>add_init_holding(stock, shares, cost, config)</code>
+        <div style="margin-top: 0.3rem; color: #6b7280; font-size: 0.8rem;">
+          &#8594; 檢查是否已存在該股票（若存在則拒絕）<br>
+          &#8594; 呼叫 calculator 建立 init state
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #94a3b8; margin: 0.5rem 0;">&#9660; 傳遞</div>
+
+    <!-- Calculator Layer -->
+    <div style="border: 2px solid #d97706; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fffbeb;">
+      <div style="font-weight: 700; color: #d97706; margin-bottom: 0.5rem;">Calculator Layer (calculator.py)</div>
+      <div style="font-size: 0.9rem;">
+        <code>init_holding(state, tx, config)</code>
+        <div style="margin-top: 0.3rem; color: #6b7280; font-size: 0.8rem;">
+          &#8594; 新 action 類型 <code>"init"</code><br>
+          &#8594; 設定 shares = tx.shares, total_cost = tx.total_amount<br>
+          &#8594; avg_cost = total_cost / shares<br>
+          &#8594; 無手續費 / 無交易稅
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #94a3b8; margin: 0.5rem 0;">&#9660; 儲存</div>
+
+    <!-- Data Storage -->
+    <div style="border: 2px solid #7c3aed; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #f5f3ff;">
+      <div style="font-weight: 700; color: #7c3aed; margin-bottom: 0.5rem;">Data Layer (store.py / state.json)</div>
+      <div style="font-size: 0.9rem; color: #6b7280;">
+        Portfolio &#8594; JSON &#8594; 寫入 state.json<br>
+        與現有 buy/sell/dividend 完全相容儲存
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CLI 使用範例 -->
+<div class="section" style="margin-top: 1.5rem;">
+  <h3>使用範例</h3>
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.6;">
+    <div><span style="color: #22c55e;"># 首次使用：直接設定目前持倉</span></div>
+    <div>$ python main.py holding add --stock 2330 --shares 2000 --cost 500000</div>
+    <div><span style="color: #64748b;">&#8594; 平均成本：250.00，已記錄初始持倉</span></div>
+    <div> </div>
+    <div><span style="color: #22c55e;"># 查看狀態</span></div>
+    <div>$ python main.py status</div>
+    <div> </div>
+    <div><span style="color: #22c55e;"># 後續正常買賣</span></div>
+    <div>$ python main.py add buy --stock 2330 --date 2026-06-01 --price 300 --shares 500</div>
+    <div> </div>
+    <div><span style="color: #22c55e;"># 產生含即時股價的報表</span></div>
+    <div>$ python main.py report --stock 2330 --auto-price</div>
+  </div>
+</div>
+
+<!-- 變更範圍 -->
+<div class="section" style="margin-top: 1.5rem;">
+  <h3>需要修改的檔案</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <span style="color: #2563eb; font-weight: 600;">core/models.py</span><br>
+      新增 action 類型 "init"
+    </div>
+    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <span style="color: #059669; font-weight: 600;">core/calculator.py</span><br>
+      新增 init_holding() handler
+    </div>
+    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <span style="color: #d97706; font-weight: 600;">core/portfolio.py</span><br>
+      新增 add_init_holding() 方法
+    </div>
+    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <span style="color: #dc2626; font-weight: 600;">core/report.py</span><br>
+      total_invested 加入 "init"
+    </div>
+    <div style="padding: 0.5rem; border: 1px solid #7c3aed; border-radius: 4px; grid-column: 1 / -1;">
+      <span style="color: #7c3aed; font-weight: 600;">main.py</span><br>
+      新增 holding 子命令（add / list / remove）
+    </div>
+    <div style="padding: 0.5rem; border: 1px solid #e11d48; border-radius: 4px; grid-column: 1 / -1;">
+      <span style="color: #e11d48; font-weight: 600;">tests/test_holding.py</span> (新檔案)<br>
+      測試 init 建立、平均成本、重複拒絕、remove
+    </div>
+  </div>
+</div>

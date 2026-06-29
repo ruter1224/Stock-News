@@ -1,0 +1,219 @@
+<h2>Stock Tracker GUI 設計提案 — Tkinter</h2>
+<p class="subtitle">Python 內建 GUI，不需安裝任何額外套件，直接使用現有 core/data 模組</p>
+
+<!-- 整體架構 -->
+<div class="section">
+  <h3>視窗架構</h3>
+  <div class="mockup">
+    <div class="mockup-header">主視窗 (1200×750)</div>
+    <div class="mockup-body" style="padding: 1.5rem;">
+
+      <!-- Menubar -->
+      <div style="background: #1e293b; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; margin-bottom: 1rem; display: flex; gap: 1.5rem; font-size: 0.85rem;">
+        <span>檔案(F)</span>
+        <span>編輯(E)</span>
+        <span>檢視(V)</span>
+        <span>說明(H)</span>
+      </div>
+
+      <div style="display: flex; gap: 1rem;">
+
+        <!-- Left Panel: Stock List -->
+        <div style="flex: 0 0 280px; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden;">
+          <div style="background: #2563eb; color: white; padding: 0.5rem 0.8rem; font-weight: 600; font-size: 0.85rem;">
+            &#x1F4CA; 庫存列表
+          </div>
+          <div style="padding: 0.5rem;">
+            <div style="margin-bottom: 0.3rem;">
+              <span style="background: #e5e7eb; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.75rem;">搜尋</span>
+              <input type="text" placeholder="輸入股號..." style="width: 150px; padding: 0.2rem; font-size: 0.75rem;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.5rem;">
+              <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 4px; padding: 0.4rem 0.6rem; cursor: pointer;">
+                <div style="font-weight: 600; font-size: 0.85rem;">2330 台積電</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">2,500 股 | 均價 260.09</div>
+                <div style="font-size: 0.75rem; color: #16a34a;">&#9650; +114.00%</div>
+              </div>
+              <div style="border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.4rem 0.6rem; cursor: pointer;">
+                <div style="font-weight: 600; font-size: 0.85rem;">2317 鴻海</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">1,000 股 | 均價 120.00</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">-- (無市價)</div>
+              </div>
+              <div style="border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.4rem 0.6rem; cursor: pointer;">
+                <div style="font-weight: 600; font-size: 0.85rem;">6669 緯穎</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">1,000 股 | 均價 2,000.00</div>
+                <div style="font-size: 0.75rem; color: #16a34a;">&#9650; +114.00%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Detail -->
+        <div style="flex: 1; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden;">
+          <div style="background: #2563eb; color: white; padding: 0.5rem 0.8rem; font-weight: 600; font-size: 0.85rem; display: flex; justify-content: space-between;">
+            <span>&#x1F4CB; 2330 台積電 詳細資訊</span>
+            <span style="display: flex; gap: 0.5rem;">
+              <span style="background: white; color: #2563eb; padding: 0.1rem 0.5rem; border-radius: 3px; font-size: 0.75rem; cursor: pointer;">重新整理</span>
+              <span style="background: white; color: #2563eb; padding: 0.1rem 0.5rem; border-radius: 3px; font-size: 0.75rem; cursor: pointer;">+ 新增交易</span>
+            </span>
+          </div>
+          <div style="padding: 1rem;">
+
+            <!-- Summary Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+              <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: #6b7280;">持有股數</div>
+                <div style="font-size: 1.2rem; font-weight: 700;">2,500</div>
+              </div>
+              <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: #6b7280;">平均成本</div>
+                <div style="font-size: 1.2rem; font-weight: 700;">260.09</div>
+              </div>
+              <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: #6b7280;">目前市價</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: #16a34a;">4,280.00</div>
+              </div>
+              <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.7rem; color: #6b7280;">未實現損益</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: #16a34a;">+2,280,000</div>
+              </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div style="display: flex; gap: 0.2rem; border-bottom: 2px solid #2563eb; margin-bottom: 0.5rem;">
+              <div style="background: #2563eb; color: white; padding: 0.3rem 1rem; border-radius: 4px 4px 0 0; font-size: 0.8rem; cursor: pointer;">&#x1F4C4; 交易明細</div>
+              <div style="padding: 0.3rem 1rem; font-size: 0.8rem; cursor: pointer; color: #6b7280;">&#x1F4CA; 損益圖表</div>
+              <div style="padding: 0.3rem 1rem; font-size: 0.8rem; cursor: pointer; color: #6b7280;">&#x1F4C5; 股利紀錄</div>
+            </div>
+
+            <!-- Transactions Table -->
+            <div style="font-size: 0.75rem;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 0.3rem; text-align: left;">日期</th>
+                    <th style="padding: 0.3rem; text-align: left;">類型</th>
+                    <th style="padding: 0.3rem; text-align: right;">價格</th>
+                    <th style="padding: 0.3rem; text-align: right;">股數</th>
+                    <th style="padding: 0.3rem; text-align: right;">金額</th>
+                    <th style="padding: 0.3rem; text-align: right;">手續費</th>
+                    <th style="padding: 0.3rem; text-align: right;">稅</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding: 0.3rem;">2026-01-01</td>
+                    <td style="padding: 0.3rem;"><span style="background: #e5e7eb; padding: 0.1rem 0.4rem; border-radius: 3px;">初始</span></td>
+                    <td style="padding: 0.3rem; text-align: right;">250.00</td>
+                    <td style="padding: 0.3rem; text-align: right;">2,000</td>
+                    <td style="padding: 0.3rem; text-align: right;">500,000</td>
+                    <td style="padding: 0.3rem; text-align: right;">0</td>
+                    <td style="padding: 0.3rem; text-align: right;">0</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0.3rem;">2026-06-15</td>
+                    <td style="padding: 0.3rem;"><span style="background: #dbeafe; color: #2563eb; padding: 0.1rem 0.4rem; border-radius: 3px;">買入</span></td>
+                    <td style="padding: 0.3rem; text-align: right;">300.00</td>
+                    <td style="padding: 0.3rem; text-align: right;">500</td>
+                    <td style="padding: 0.3rem; text-align: right;">150,000</td>
+                    <td style="padding: 0.3rem; text-align: right;">213</td>
+                    <td style="padding: 0.3rem; text-align: right;">0</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0.3rem;">2026-07-01</td>
+                    <td style="padding: 0.3rem;"><span style="background: #fee2e2; color: #dc2626; padding: 0.1rem 0.4rem; border-radius: 3px;">賣出</span></td>
+                    <td style="padding: 0.3rem; text-align: right;">500.00</td>
+                    <td style="padding: 0.3rem; text-align: right;">200</td>
+                    <td style="padding: 0.3rem; text-align: right;">100,000</td>
+                    <td style="padding: 0.3rem; text-align: right;">0</td>
+                    <td style="padding: 0.3rem; text-align: right;">300</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 0.5rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>損益摘要</strong>：總報酬率 <span style="color: #16a34a; font-weight: 600;">+114.00%</span> |
+                已實現 <span style="color: #16a34a;">+0.00</span> |
+                未實現 <span style="color: #16a34a;">+2,280,000</span>
+              </div>
+              <div>
+                <span style="background: #2563eb; color: white; padding: 0.2rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">匯出 CSV</span>
+                <span style="background: #2563eb; color: white; padding: 0.2rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">匯出 HTML</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction Dialog -->
+<div class="section" style="margin-top: 1.5rem;">
+  <h3>新增交易對話框</h3>
+  <div class="mockup" style="max-width: 500px;">
+    <div class="mockup-header">新增交易</div>
+    <div class="mockup-body" style="padding: 1rem;">
+      <div style="display: grid; grid-template-columns: 100px 1fr; gap: 0.5rem; font-size: 0.85rem;">
+        <div style="text-align: right; padding: 0.3rem; color: #374151;">股票代碼</div>
+        <div><input type="text" value="2330" style="width: 100%; padding: 0.3rem;"></div>
+
+        <div style="text-align: right; padding: 0.3rem; color: #374151;">交易類型</div>
+        <div>
+          <select style="width: 100%; padding: 0.3rem;">
+            <option selected>買入 (buy)</option>
+            <option>賣出 (sell)</option>
+            <option>現金股利 (dividend)</option>
+            <option>股利再投資 (dividend_reinvest)</option>
+            <option>股票股利 (stock_dividend)</option>
+          </select>
+        </div>
+
+        <div style="text-align: right; padding: 0.3rem; color: #374151;">日期</div>
+        <div><input type="text" value="2026-07-01" style="width: 100%; padding: 0.3rem;"></div>
+
+        <div style="text-align: right; padding: 0.3rem; color: #374151;">價格</div>
+        <div><input type="text" value="500.00" style="width: 100%; padding: 0.3rem;"></div>
+
+        <div style="text-align: right; padding: 0.3rem; color: #374151;">股數</div>
+        <div><input type="text" value="200" style="width: 100%; padding: 0.3rem;"></div>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+        <span style="background: #e5e7eb; color: #374151; padding: 0.3rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">取消</span>
+        <span style="background: #2563eb; color: white; padding: 0.3rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">確定新增</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Function Buttons Bar -->
+<div class="section" style="margin-top: 1.5rem;">
+  <h3>底部功能列</h3>
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <div style="background: #2563eb; color: white; padding: 0.4rem 1rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">&#x1F4E5; 匯入 CSV</div>
+    <div style="background: #2563eb; color: white; padding: 0.4rem 1rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">&#x1F4E4; 匯出 CSV</div>
+    <div style="background: #059669; color: white; padding: 0.4rem 1rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">&#x1F504; 重新整理股價</div>
+    <div style="background: #d97706; color: white; padding: 0.4rem 1rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">&#x1F4C5; 初始持倉設定</div>
+    <div style="background: #dc2626; color: white; padding: 0.4rem 1rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">&#x1F5D1; 刪除股票</div>
+  </div>
+</div>
+
+<!-- Modified Files -->
+<div class="section" style="margin-top: 1.5rem;">
+  <h3>預計新增/修改檔案</h3>
+  <div style="font-size: 0.85rem;">
+    <div style="padding: 0.3rem 0;"><span style="color: #2563eb; font-weight: 600;">gui/app.py</span> — 主視窗與頁面切換</div>
+    <div style="padding: 0.3rem 0;"><span style="color: #059669; font-weight: 600;">gui/dashboard.py</span> — 庫存列表面板</div>
+    <div style="padding: 0.3rem 0;"><span style="color: #059669; font-weight: 600;">gui/detail.py</span> — 個股詳細面板</div>
+    <div style="padding: 0.3rem 0;"><span style="color: #059669; font-weight: 600;">gui/dialogs.py</span> — 新增交易/設定持倉對話框</div>
+    <div style="padding: 0.3rem 0;"><span style="color: #7c3aed; font-weight: 600;">gui/__init__.py</span> — 套件初始化</div>
+  </div>
+  <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+    純 Tkinter 實作，直接呼叫現有 core/ 和 data/ 模組，不新增第三方依賴。
+  </p>
+</div>
