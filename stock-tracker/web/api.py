@@ -10,6 +10,7 @@ from data.importer import parse_trades_csv, export_trades_csv
 from core.models import Transaction
 from core.history import init_history_dir, download_history, update_history, list_history_codes, history_exists
 from core.backtest import single_stock_backtest, portfolio_backtest
+from core.news import init_cache as init_news_cache, get_news_page, refresh_news
 
 _data_dir_env = os.environ.get("STOCK_TRACKER_DATA_DIR")
 if _data_dir_env:
@@ -27,6 +28,7 @@ if not Path(STATE_FILE).exists():
 portfolio = load_portfolio(STATE_FILE)
 cfg = Config()
 init_history_dir(str(DATA_DIR))
+init_news_cache(str(DATA_DIR))
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -330,6 +332,24 @@ def get_summary():
             "zero_cost": state.is_zero_cost,
         })
     return jsonify(items)
+
+
+# ====== News ======
+
+@api.route("/news")
+def get_news():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    per_page = min(per_page, 50)
+    return jsonify(get_news_page(page=page, per_page=per_page))
+
+
+@api.route("/news/refresh", methods=["POST"])
+def refresh_news_api():
+    result = refresh_news()
+    if "error" in result:
+        return jsonify(result), 429
+    return jsonify(result)
 
 
 # ====== Backtest ======

@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError
+from xml.etree import ElementTree as ET
 
 CACHE_TTL = 1800
 REFRESH_COOLDOWN = 1200
@@ -10,6 +11,13 @@ PER_PAGE = 20
 
 _CACHE_PATH = None
 _CACHE = None
+
+# 台灣主要市場標的（用於 RSS 彙整頭條新聞）
+_MARKET_SYMBOLS = [
+    "2330.TW", "2317.TW", "2454.TW", "2308.TW",
+    "2884.TW", "2881.TW", "2002.TW", "2412.TW",
+    "1301.TW", "3008.TW",
+]
 
 
 def init_cache(cache_dir):
@@ -45,9 +53,8 @@ def _is_cooldown():
     return (now - last) < REFRESH_COOLDOWN
 
 
-def _fetch_yahoo_news():
-    symbols = "^TWII,2330.TW,2317.TW,2454.TW,2308.TW,2884.TW,2881.TW,2002.TW,2412.TW,1301.TW"
-    url = f"https://query1.finance.yahoo.com/v1/finance/news?symbols={symbols}"
+def _fetch_rss_news(symbol):
+    url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
     req = Request(url, headers={
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -57,28 +64,44 @@ def _fetch_yahoo_news():
     })
     try:
         with urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except (URLError, OSError, json.JSONDecodeError):
+            root = ET.fromstring(resp.read().decode("utf-8"))
+            articles = []
+            for item in root.findall(".//item"):
+                title = item.findtext("title", "")
+                desc = item.findtext("description", "")
+                link = item.findtext("link", "")
+                pub_date = item.findtext("pubDate", "")
+                articles.append({
+                    "title": title,
+                    "summary": desc,
+                    "url": link,
+                    "source": "Yahoo Finance",
+                    "published": pub_date,
+                    "related_stocks": [symbol.replace(".TW", "")],
+                })
+            return articles
+    except (URLError, OSError, ET.ParseError):
         return []
-    items = data.get("items", [])
-    articles = []
-    for item in items:
-        articles.append({
-            "title": item.get("title", ""),
-            "summary": item.get("summary", ""),
-            "url": item.get("link", ""),
-            "source": "Yahoo Finance",
-            "published": item.get("pubDate", ""),
-            "related_stocks": item.get("relatedTickers", []),
-        })
-    articles.sort(key=lambda a: a.get("published", ""), reverse=True)
-    return articles
+
+
+def _fetch_market_news():
+    seen = set()
+    all_articles = []
+    for symbol in _MARKET_SYMBOLS:
+        articles = _fetch_rss_news(symbol)
+        for a in articles:
+            key = a["url"]
+            if key not in seen:
+                seen.add(key)
+                all_articles.append(a)
+    all_articles.sort(key=lambda a: a.get("published", ""), reverse=True)
+    return all_articles
 
 
 def fetch_market_news():
     if _is_cache_valid():
         return _CACHE.get("articles", [])
-    articles = _fetch_yahoo_news()
+    articles = _fetch_market_news()
     _CACHE["articles"] = articles
     _CACHE["total"] = len(articles)
     _CACHE["cached_at"] = time.time()
@@ -115,7 +138,7 @@ def refresh_news():
     if _is_cooldown():
         remaining = get_cooldown_remaining()
         return {"error": f"冷卻中，請於 {remaining // 60} 分鐘後再試", "cooldown_remaining": remaining}
-    articles = _fetch_yahoo_news()
+    articles = _fetch_market_news()
     _CACHE["articles"] = articles
     _CACHE["total"] = len(articles)
     _CACHE["last_refresh_at"] = time.time()
