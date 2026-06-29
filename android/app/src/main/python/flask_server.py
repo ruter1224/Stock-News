@@ -19,22 +19,29 @@ def _copy_assets(data_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     from com.chaquo.python import Python
+    from java.io import ByteArrayOutputStream, DataInputStream
     ctx = Python.getPlatform().getApplication()
     asset_mgr = ctx.getAssets()
 
+    def copy_asset(src_path, dest_path):
+        stream = asset_mgr.open(src_path)
+        dis = DataInputStream(stream)
+        baos = ByteArrayOutputStream()
+        buf = bytearray(4096)
+        while True:
+            n = dis.read(buf, 0, len(buf))
+            if n <= 0:
+                break
+            baos.write(buf, 0, n)
+        with open(dest_path, "wb") as f:
+            f.write(baos.toByteArray())
+        dis.close()
+
     for fname in asset_mgr.list("web/templates"):
-        src = asset_mgr.open("web/templates/" + fname)
-        dest = os.path.join(template_dir, fname)
-        with open(dest, "wb") as f:
-            f.write(src.read())
-        src.close()
+        copy_asset("web/templates/" + fname, os.path.join(template_dir, fname))
 
     for fname in asset_mgr.list("web/static"):
-        src = asset_mgr.open("web/static/" + fname)
-        dest = os.path.join(static_dir, fname)
-        with open(dest, "wb") as f:
-            f.write(src.read())
-        src.close()
+        copy_asset("web/static/" + fname, os.path.join(static_dir, fname))
 
 
 def start_server(data_dir):
@@ -44,6 +51,10 @@ def start_server(data_dir):
 
     web_dir = os.path.join(data_dir, "web")
     _copy_assets(data_dir)
+
+    # Initialize price cache
+    from core.prices import init_cache
+    init_cache(os.path.join(data_dir, "data"))
 
     from web.app import create_app
     app = create_app()

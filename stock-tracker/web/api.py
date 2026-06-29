@@ -37,7 +37,7 @@ def _save():
 
 def _stock_summary(code):
     state = portfolio.get_state(code)
-    price, name = fetch_price_safe(code)
+    price, name = _get_cached_price(code)
     rep = generate_report(state, current_price=price)
     return {
         "code": code,
@@ -47,11 +47,20 @@ def _stock_summary(code):
         "total_cost": round(state.total_cost, 2),
         "avg_cost": round(state.avg_cost, 2),
         "current_price": price,
-        "market_value": round((price or 0) * state.shares, 2) if price else rep.current_value,
-        "unrealized_pl": round(rep.total_pl, 2),
-        "unrealized_pl_pct": round(rep.total_roi_pct, 2),
+        "market_value": round((price or 0) * state.shares, 2) if price else 0,
+        "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if price else 0,
         "is_zero_cost": state.is_zero_cost,
     }
+
+
+def _get_cached_price(code):
+    """Read price from cache without triggering a fetch."""
+    from core.prices import _CACHE
+    entry = _CACHE.get(code)
+    if entry:
+        return entry.get("price"), entry.get("name", "")
+    return None, ""
 
 
 def fetch_price_safe(code):
@@ -89,7 +98,7 @@ def get_stock_detail(code):
     state = portfolio.get_state(code)
     if not state or not state.history:
         return jsonify({"error": "找不到該股票"}), 404
-    price, name = fetch_price_safe(code)
+    price, name = _get_cached_price(code)
     rep = generate_report(state, current_price=price)
     history = []
     for tx in state.history:
@@ -113,9 +122,9 @@ def get_stock_detail(code):
         "total_cost": round(state.total_cost, 2),
         "avg_cost": round(state.avg_cost, 2),
         "current_price": price,
-        "market_value": round((price or 0) * state.shares, 2) if price else rep.current_value,
-        "unrealized_pl": round(rep.total_pl, 2),
-        "unrealized_pl_pct": round(rep.total_roi_pct, 2),
+        "market_value": round((price or 0) * state.shares, 2) if price else 0,
+        "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if price else 0,
         "is_zero_cost": state.is_zero_cost,
         "history": history,
     })
