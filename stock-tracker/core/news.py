@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from pathlib import Path
 from urllib.request import urlopen, Request
@@ -18,6 +19,10 @@ _MARKET_SYMBOLS = [
     "2884.TW", "2881.TW", "2002.TW", "2412.TW",
     "1301.TW", "3008.TW",
 ]
+
+
+def _has_chinese(text):
+    return bool(re.search(r'[\u4e00-\u9fff\u3400-\u4dbf]', text))
 
 
 def init_cache(cache_dir):
@@ -53,8 +58,8 @@ def _is_cooldown():
     return (now - last) < REFRESH_COOLDOWN
 
 
-def _fetch_rss_news(symbol):
-    url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
+def _fetch_rss_news(symbol, region="TW", lang="zh-Hant-TW"):
+    url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region={region}&lang={lang}"
     req = Request(url, headers={
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -78,6 +83,7 @@ def _fetch_rss_news(symbol):
                     "source": "Yahoo Finance",
                     "published": pub_date,
                     "related_stocks": [symbol.replace(".TW", "")],
+                    "is_chinese": _has_chinese(title),
                 })
             return articles
     except (URLError, OSError, ET.ParseError):
@@ -87,14 +93,27 @@ def _fetch_rss_news(symbol):
 def _fetch_market_news():
     seen = set()
     all_articles = []
+    # 先抓中文 RSS（台灣版）
     for symbol in _MARKET_SYMBOLS:
-        articles = _fetch_rss_news(symbol)
+        articles = _fetch_rss_news(symbol, region="TW", lang="zh-Hant-TW")
         for a in articles:
             key = a["url"]
             if key not in seen:
                 seen.add(key)
                 all_articles.append(a)
-    all_articles.sort(key=lambda a: a.get("published", ""), reverse=True)
+    # 再抓英文 RSS（補足更多新聞）
+    for symbol in _MARKET_SYMBOLS:
+        articles = _fetch_rss_news(symbol, region="US", lang="en-US")
+        for a in articles:
+            key = a["url"]
+            if key not in seen:
+                seen.add(key)
+                all_articles.append(a)
+    # 排序：中文優先（依日期），再英文（依日期）
+    all_articles.sort(key=lambda a: (
+        1 if a.get("is_chinese") else 0,
+        a.get("published", ""),
+    ), reverse=True)
     return all_articles
 
 
