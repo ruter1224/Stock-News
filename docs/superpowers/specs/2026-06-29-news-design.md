@@ -80,7 +80,7 @@ stock-tracker/
 
 | 項目 | 內容 |
 |------|------|
-| 主要來源 | Yahoo Finance v1 API (`query1.finance.yahoo.com/v1/finance/news`) |
+| 主要來源 | Yahoo Finance RSS (`feeds.finance.yahoo.com/rss/2.0/headline?symbol=X&region=TW&lang=zh-Hant-TW`) |
 | 備援方案 | RSS Feed（Yahoo Finance RSS） |
 | API Key | 不需要（與現有股價 API 同一來源） |
 | 頭條策略 | 查詢多個台灣主要標的（^TWII, 2330, 2317 等）彙整為頭條 |
@@ -103,7 +103,8 @@ stock-tracker/
       "url": "https://finance.yahoo.com/news/...",
       "source": "Yahoo Finance",
       "published": "2026-06-29T10:00:00Z",
-      "related_stocks": ["2330"]
+      "related_stocks": ["2330"],
+      "is_chinese": true
     }
   ],
   "total": 85,
@@ -134,8 +135,8 @@ stock-tracker/
 | 函數 | 功能 |
 |------|------|
 | `init_cache(cache_dir)` | 初始化快取目錄 |
-| `fetch_market_news()` | 從 Yahoo Finance 抓取財經頭條 |
-| `get_news_page(page, per_page)` | 取得分頁新聞（從快取或 Yahoo） |
+| `fetch_market_news()` | 從 Yahoo Finance RSS 抓取財經頭條（中/英文），中文優先排列 |
+| `get_news_page(page, per_page)` | 取得分頁新聞（從快取或 RSS） |
 | `refresh_news()` | 強制重新整理（檢查冷卻） |
 | `_load_cache()` / `_save_cache()` | 快取讀寫 |
 | `_is_cache_valid()` | 檢查快取是否過期（30分鐘） |
