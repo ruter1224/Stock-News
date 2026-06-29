@@ -12,6 +12,7 @@ function switchTab(tab) {
     if (tab === 'etf') loadEtfList();
     if (tab === 'settings') loadConfig();
     if (tab === 'backtest') loadBacktest();
+    if (tab === 'news') loadNews(1);
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -672,6 +673,98 @@ function renderBtTable(data) {
             <td class="right ${dd < 0 ? 'card-value negative' : ''}" style="font-size:13px">${fmtPL(dd)}%</td>
         `;
         tbody.appendChild(tr);
+    }
+}
+
+// ====== News ======
+let _newsCurrentPage = 1;
+
+async function loadNews(page) {
+    _newsCurrentPage = page || 1;
+    const query = '/api/news?page=' + _newsCurrentPage + '&per_page=20';
+    try {
+        const res = await fetch(query);
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || '載入失敗', 'error'); return; }
+        renderNews(data);
+    } catch (e) {
+        showToast('新聞載入失敗: ' + e.message, 'error');
+    }
+}
+
+function renderNews(data) {
+    const el = document.getElementById('news-list');
+    const statusEl = document.getElementById('news-status');
+
+    if (data.cooldown_remaining > 0) {
+        const min = Math.ceil(data.cooldown_remaining / 60);
+        statusEl.textContent = '已更新 · 還剩 ' + min + ' 分鐘可重新整理';
+    } else {
+        const lastRefresh = data.last_refresh_at ? new Date(data.last_refresh_at * 1000).toLocaleString('zh-TW') : '尚未更新';
+        statusEl.textContent = '上次更新：' + lastRefresh;
+    }
+
+    if (!data.articles || data.articles.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">暫無新聞</div>';
+        document.getElementById('news-pagination').innerHTML = '';
+        return;
+    }
+
+    var html = '';
+    for (var i = 0; i < data.articles.length; i++) {
+        var a = data.articles[i];
+        var date = a.published ? new Date(a.published).toLocaleDateString('zh-TW') : '';
+        var stocksHtml = '';
+        if (a.related_stocks && a.related_stocks.length > 0) {
+            stocksHtml = '<div style="margin-top:4px"><span style="font-size:12px;color:var(--gray-500)">' + a.related_stocks.join(', ') + '</span></div>';
+        }
+        html += '<div class="news-item" onclick="window.open(\'' + a.url + '\',\'_blank\')" style="cursor:pointer;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;transition:background 0.2s" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'\'">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+        html += '<div style="font-weight:600;color:var(--gray-800);margin-bottom:4px;flex:1">' + a.title + '</div>';
+        html += '<div style="font-size:12px;color:var(--gray-400);white-space:nowrap;margin-left:12px">' + date + '</div>';
+        html += '</div>';
+        html += '<div style="font-size:13px;color:var(--gray-500);margin-bottom:4px">' + a.summary + '</div>';
+        html += '<div style="font-size:12px;color:var(--gray-400)"> Yahoo Finance</div>';
+        html += stocksHtml;
+        html += '</div>';
+    }
+    el.innerHTML = html;
+    renderNewsPagination(data);
+}
+
+function renderNewsPagination(data) {
+    var el = document.getElementById('news-pagination');
+    if (data.total_pages <= 1) { el.innerHTML = ''; return; }
+    var html = '<div style="text-align:center;padding:12px">';
+    if (data.page > 1) {
+        html += '<button class="btn btn-sm btn-gray" onclick="loadNews(' + (data.page - 1) + ')" style="margin-right:8px">上一頁</button>';
+    }
+    html += '<span style="font-size:13px;color:var(--gray-500);margin:0 12px">第 ' + data.page + ' / ' + data.total_pages + ' 頁</span>';
+    if (data.page < data.total_pages) {
+        html += '<button class="btn btn-sm btn-gray" onclick="loadNews(' + (data.page + 1) + ')" style="margin-left:8px">下一頁</button>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+}
+
+async function refreshNews() {
+    try {
+        const res = await fetch('/api/news/refresh', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            if (data.cooldown_remaining) {
+                const min = Math.ceil(data.cooldown_remaining / 60);
+                showToast('冷卻中，剩 ' + min + ' 分鐘', 'warning');
+            } else {
+                showToast(data.error || '重新整理失敗', 'error');
+            }
+            return;
+        }
+        showToast('新聞已更新', 'success');
+        renderNews(data);
+        loadNews(1);
+    } catch (e) {
+        showToast('重新整理失敗: ' + e.message, 'error');
     }
 }
 

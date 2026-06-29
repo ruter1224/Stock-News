@@ -19,6 +19,9 @@
     --gray-700: #374151;
     --gray-800: #1f2937;
     --gray-900: #111827;
+    --border: #e5e7eb;
+    --bg-hover: #f3f4f6;
+    --gray-900: #111827;
     --card-bg: #f8fafc;
     --card-border: #e5e7eb;
     --tag-stock-bg: #dbeafe;
@@ -478,4 +481,17 @@ table.data-table tr:hover { background: var(--gray-100); }
     font-weight: 600;
     margin-bottom: 10px;
     color: var(--gray-700);
+}
+
+.news-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+.pagination {
+    margin-top: 16px;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
 }
