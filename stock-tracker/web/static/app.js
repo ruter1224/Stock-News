@@ -13,6 +13,7 @@ function switchTab(tab) {
     if (tab === 'settings') loadConfig();
     if (tab === 'backtest') loadBacktest();
     if (tab === 'news') loadNews(1);
+    if (tab === 'archived') loadArchived();
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -766,6 +767,37 @@ async function refreshNews() {
     } catch (e) {
         showToast('重新整理失敗: ' + e.message, 'error');
     }
+}
+
+// ====== Archived ======
+async function loadArchived() {
+    const data = await api('/api/portfolio/archived');
+    if (!data) return;
+
+    const el = document.getElementById('archived-list');
+    if (!data.stocks || data.stocks.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">尚無已封存的股票</div>';
+        return;
+    }
+
+    let html = '<div class="table-wrap"><table class="data-table"><thead><tr>';
+    html += '<th>代碼</th><th>類型</th><th>總成本</th><th>交易次數</th><th>最後交易日期</th>';
+    html += '</tr></thead><tbody>';
+
+    for (const s of data.stocks) {
+        const lastTx = s.history && s.history.length > 0 ? s.history[s.history.length - 1] : null;
+        const lastDate = lastTx ? lastTx.date : 'N/A';
+        const txCount = s.history ? s.history.length : 0;
+        html += `<tr>
+            <td>${s.code}${s.name ? '<br><span class="stock-name">' + s.name + '</span>' : ''}</td>
+            <td><span class="badge ${s.type === 'ETF' ? 'badge-etf' : 'badge-stock'}">${s.type}</span></td>
+            <td class="right">${fmt(s.total_cost)}</td>
+            <td class="right">${txCount}</td>
+            <td>${lastDate}</td>
+        </tr>`;
+    }
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
 }
 
 // ====== Init ======

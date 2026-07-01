@@ -13,6 +13,13 @@ def buy(state, tx, config):
     tx.total_amount = round(tx.price * tx.shares, 2)
 
     avg = new_cost / new_shares if new_shares > 0 else 0.0
+
+    # 自動解封：如果之前已封存，現在重新買入
+    new_archived = state.archived
+    if state.archived:
+        new_archived = False
+        tx.remark = "重新買入"
+
     return StockState(
         shares=new_shares,
         total_cost=new_cost,
@@ -21,6 +28,7 @@ def buy(state, tx, config):
         history=state.history + [tx],
         total_dividend_received=state.total_dividend_received,
         dividend_offset_applied=state.dividend_offset_applied,
+        archived=new_archived,
     )
 
 
@@ -47,6 +55,12 @@ def sell(state, tx, config):
 
     avg = new_cost / new_shares if new_shares > 0 else 0.0
 
+    # 自動封存：賣出後股數為 0
+    new_archived = state.archived
+    if new_shares == 0:
+        new_archived = True
+        tx.remark = "已出清"
+
     return StockState(
         shares=new_shares,
         total_cost=new_cost,
@@ -55,6 +69,7 @@ def sell(state, tx, config):
         history=state.history + [tx],
         total_dividend_received=state.total_dividend_received,
         dividend_offset_applied=state.dividend_offset_applied,
+        archived=new_archived,
     )
 
 
@@ -144,6 +159,11 @@ def init_holding(state, tx, config):
     new_shares = tx.shares
     new_cost = round(tx.total_amount, 2)
     avg = new_cost / new_shares if new_shares > 0 else 0.0
+
+    # 自動解封：如果之前已封存，現在重新設定持倉
+    if state.archived:
+        tx.remark = "重新買入"
+
     return StockState(
         shares=new_shares,
         total_cost=new_cost,
@@ -152,6 +172,7 @@ def init_holding(state, tx, config):
         history=state.history + [tx],
         total_dividend_received=0.0,
         dividend_offset_applied=0.0,
+        archived=False,
     )
 
 

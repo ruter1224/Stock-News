@@ -53,6 +53,7 @@ def _stock_summary(code):
         "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
         "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if rep.unrealized_pl_pct is not None else 0,
         "is_zero_cost": state.is_zero_cost,
+        "archived": state.archived,
     }
 
 
@@ -77,7 +78,7 @@ def fetch_price_safe(code):
 
 @api.route("/portfolio")
 def get_portfolio():
-    codes = sorted(portfolio.stock_codes)
+    codes = sorted(portfolio.active_stock_codes)
     stocks = [_stock_summary(c) for c in codes]
     total_value = sum(s["market_value"] for s in stocks)
     total_cost = sum(s["total_cost"] for s in stocks)
@@ -92,6 +93,16 @@ def get_portfolio():
         "total_pl": round(total_pl, 2),
         "total_roi": round(roi, 2),
         "zc_count": zc_count,
+    })
+
+
+@api.route("/portfolio/archived")
+def get_archived_portfolio():
+    codes = sorted(portfolio.archived_stock_codes)
+    stocks = [_stock_summary(c) for c in codes]
+    return jsonify({
+        "stocks": stocks,
+        "count": len(stocks),
     })
 
 

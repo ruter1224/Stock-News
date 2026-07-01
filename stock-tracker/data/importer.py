@@ -13,6 +13,8 @@ COLUMN_MAP = {
     "fee": ["fee", "手續費"],
     "tax": ["tax", "交易稅", "證券交易稅", "證交稅"],
     "total_amount": ["total_amount", "淨付金額", "淨收付", "金額", "成交金額"],
+    "status": ["status", "狀態"],
+    "remark": ["remark", "備註"],
 }
 
 ACTION_MAP = {
@@ -67,7 +69,7 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
         header = [h.strip() for h in next(reader)]
 
         cols = {}
-        for field in ["date", "stock", "action", "price", "shares", "fee", "tax"]:
+        for field in ["date", "stock", "action", "price", "shares", "fee", "tax", "status", "remark"]:
             match = _detect_column(header, field)
             if match:
                 cols[field] = header.index(match)
@@ -97,6 +99,7 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
             stock_code = _g("stock") if "stock" in cols else "0000"
             fee = float(_g("fee").replace(",", "")) if (_g("fee") and _g("fee") != "-") else 0.0
             tax = float(_g("tax").replace(",", "")) if (_g("tax") and _g("tax") != "-") else 0.0
+            remark = _g("remark") if "remark" in cols else ""
 
             if action not in ("buy", "sell", "dividend", "dividend_reinvest", "stock_dividend", "init"):
                 raise ValueError(f"第 {line_no} 行無法識別的交易類型：{action}")
@@ -104,7 +107,7 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
             total_amount = round(price * shares, 2)
             tx = Transaction(
                 date=date, action=action, price=price, shares=shares,
-                fee=fee, tax=tax, total_amount=total_amount,
+                fee=fee, tax=tax, total_amount=total_amount, remark=remark,
             )
             rows.append((stock_code, tx))
 
@@ -121,7 +124,7 @@ def export_trades_csv(portfolio, filepath):
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅", "成交金額"])
+        w.writerow(["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅", "成交金額", "狀態", "備註"])
         for code in sorted(portfolio.stock_codes):
             st = portfolio.get_state(code)
             for tx in st.history:
@@ -129,8 +132,10 @@ def export_trades_csv(portfolio, filepath):
                     "buy": "買進", "sell": "賣出", "dividend": "現金股利",
                     "dividend_reinvest": "股利再投資", "stock_dividend": "股票股利",
                 }
+                status = "已封存" if st.archived else "活躍"
                 w.writerow([
                     tx.date, code, action_map.get(tx.action, tx.action),
                     tx.price, tx.shares, tx.fee, tx.tax, tx.total_amount,
+                    status, tx.remark,
                 ])
     return len(portfolio.stock_codes)

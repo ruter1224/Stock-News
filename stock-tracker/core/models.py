@@ -69,6 +69,7 @@ class StockState:
     history: list[Transaction] = field(default_factory=list)
     total_dividend_received: float = 0.0
     dividend_offset_applied: float = 0.0
+    archived: bool = False
 
     def to_dict(self):
         return {
@@ -79,6 +80,7 @@ class StockState:
             "history": [t.to_dict() for t in self.history],
             "total_dividend_received": self.total_dividend_received,
             "dividend_offset_applied": self.dividend_offset_applied,
+            "archived": self.archived,
         }
 
     @classmethod
@@ -91,5 +93,6 @@ class StockState:
             history=[Transaction.from_dict(t) for t in data.get("history", [])],
             total_dividend_received=data.get("total_dividend_received", 0.0),
             dividend_offset_applied=data.get("dividend_offset_applied", 0.0),
+            archived=data.get("archived", False),
         )
         return state
