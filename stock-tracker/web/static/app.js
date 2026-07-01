@@ -229,14 +229,22 @@ function showHoldingDialog() {
     `);
 }
 
+let _isSubmitting = false;
+
 async function submitHolding() {
-    const code = document.getElementById('hd-code').value.trim();
-    const shares = parseInt(document.getElementById('hd-shares').value);
-    const total_cost = parseFloat(document.getElementById('hd-cost').value);
-    const date = document.getElementById('hd-date').value;
-    if (!code || !shares || !total_cost) { showToast('請填寫所有欄位', 'error'); return; }
-    const result = await api('/api/holdings', { method: 'POST', body: JSON.stringify({ code, shares, total_cost, date }) });
-    if (result) { hideModal(); showToast(result.message, 'success'); loadDashboard(); loadStockList(); loadEtfList(); }
+    if (_isSubmitting) return;
+    _isSubmitting = true;
+    try {
+        const code = document.getElementById('hd-code').value.trim();
+        const shares = parseInt(document.getElementById('hd-shares').value);
+        const total_cost = parseFloat(document.getElementById('hd-cost').value);
+        const date = document.getElementById('hd-date').value;
+        if (!code || !shares || !total_cost) { showToast('請填寫所有欄位', 'error'); return; }
+        const result = await api('/api/holdings', { method: 'POST', body: JSON.stringify({ code, shares, total_cost, date }) });
+        if (result) { hideModal(); showToast(result.message, 'success'); loadDashboard(); loadStockList(); loadEtfList(); }
+    } finally {
+        _isSubmitting = false;
+    }
 }
 
 function showTxnDialog(code, action) {
@@ -332,48 +340,54 @@ function setupBuyModeSwitch() {}
 function setupSellModeSwitch() {}
 
 async function submitTxn(code, action) {
-    const data = { code, action, date: document.getElementById('tx-date')?.value || '' };
-    if (action === 'buy') {
-        data.price = parseFloat(document.getElementById('tx-price').value);
-        data.shares = parseInt(document.getElementById('tx-shares').value);
-        const isTotalCost = document.querySelector('input[name="buy-mode"]:checked')?.value === 'b';
-        if (isTotalCost) {
-            data.total_paid = parseFloat(document.getElementById('tx-buy-fee').value);
-        } else {
-            data.fee = parseFloat(document.getElementById('tx-buy-fee').value || 0);
+    if (_isSubmitting) return;
+    _isSubmitting = true;
+    try {
+        const data = { code, action, date: document.getElementById('tx-date')?.value || '' };
+        if (action === 'buy') {
+            data.price = parseFloat(document.getElementById('tx-price').value);
+            data.shares = parseInt(document.getElementById('tx-shares').value);
+            const isTotalCost = document.querySelector('input[name="buy-mode"]:checked')?.value === 'b';
+            if (isTotalCost) {
+                data.total_paid = parseFloat(document.getElementById('tx-buy-fee').value);
+            } else {
+                data.fee = parseFloat(document.getElementById('tx-buy-fee').value || 0);
+            }
+        } else if (action === 'sell') {
+            data.price = parseFloat(document.getElementById('tx-price').value);
+            data.shares = parseInt(document.getElementById('tx-shares').value);
+            const isTotalIncome = document.querySelector('input[name="sell-mode"]:checked')?.value === 'b';
+            if (isTotalIncome) {
+                data.total_received = parseFloat(document.getElementById('tx-total-received').value);
+            } else {
+                data.fee = parseFloat(document.getElementById('tx-fee')?.value || 0);
+                data.tax = parseFloat(document.getElementById('tx-tax')?.value || 0);
+            }
+        } else if (action === 'dividend') {
+            data.total = parseFloat(document.getElementById('tx-total').value);
+        } else if (action === 'dividend_reinvest') {
+            data.price = parseFloat(document.getElementById('tx-price').value);
+            data.shares = parseInt(document.getElementById('tx-shares').value);
+            const isTotalCost = document.querySelector('input[name="reinvest-mode"]:checked')?.value === 'b';
+            if (isTotalCost) {
+                data.total_paid = parseFloat(document.getElementById('tx-buy-fee').value);
+            } else {
+                data.fee = 0;
+            }
+        } else if (action === 'stock_dividend') {
+            data.shares = parseInt(document.getElementById('tx-shares').value);
         }
-    } else if (action === 'sell') {
-        data.price = parseFloat(document.getElementById('tx-price').value);
-        data.shares = parseInt(document.getElementById('tx-shares').value);
-        const isTotalIncome = document.querySelector('input[name="sell-mode"]:checked')?.value === 'b';
-        if (isTotalIncome) {
-            data.total_received = parseFloat(document.getElementById('tx-total-received').value);
-        } else {
-            data.fee = parseFloat(document.getElementById('tx-fee')?.value || 0);
-            data.tax = parseFloat(document.getElementById('tx-tax')?.value || 0);
+        const result = await api('/api/transactions', { method: 'POST', body: JSON.stringify(data) });
+        if (result) {
+            hideModal();
+            showToast(result.message, 'success');
+            loadDashboard(); loadStockList(); loadEtfList();
+            const tab = document.querySelector('.tab-btn.active');
+            if (tab && tab.dataset.tab === 'stock') loadStockDetail();
+            if (tab && tab.dataset.tab === 'etf') loadEtfDetail();
         }
-    } else if (action === 'dividend') {
-        data.total = parseFloat(document.getElementById('tx-total').value);
-    } else if (action === 'dividend_reinvest') {
-        data.price = parseFloat(document.getElementById('tx-price').value);
-        data.shares = parseInt(document.getElementById('tx-shares').value);
-        const isTotalCost = document.querySelector('input[name="reinvest-mode"]:checked')?.value === 'b';
-        if (isTotalCost) {
-            data.total_paid = parseFloat(document.getElementById('tx-buy-fee').value);
-        } else {
-            data.fee = 0;
-        }
-    } else if (action === 'stock_dividend') {
-        data.shares = parseInt(document.getElementById('tx-shares').value);
-    }
-    const result = await api('/api/transactions', { method: 'POST', body: JSON.stringify(data) });
-    if (result) {
-        hideModal();
-        showToast(result.message, 'success');
-        loadDashboard(); loadStockList(); loadEtfList();
-        const tab = document.querySelector('.tab-btn.active');
-        if (tab && tab.dataset.tab === 'stock') loadStockDetail();
-        if (tab && tab.dataset.tab === 'etf') loadEtfDetail();
+    } finally {
+        _isSubmitting = false;
     }
 }
 
