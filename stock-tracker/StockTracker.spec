@@ -24,6 +24,7 @@ a = Analysis(
         'core.prices',
         'core.history',
         'core.backtest',
+        'core.news',
         'data',
         'data.store',
         'data.importer',
