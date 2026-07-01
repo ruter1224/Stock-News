@@ -319,9 +319,39 @@ def import_csv():
 @api.route("/export/csv", methods=["GET"])
 def export_csv():
     try:
-        out = str(DATA_DIR / "trades_export.csv")
-        n = export_trades_csv(portfolio, out)
-        return jsonify({"message": f"已匯出 {n} 檔股票", "path": out})
+        from datetime import datetime
+        from flask import make_response
+        import io
+        import csv as csv_module
+
+        output = io.StringIO()
+        w = csv_module.writer(output)
+        w.writerow(["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅", "成交金額", "狀態", "備註"])
+
+        count = 0
+        for code in sorted(portfolio.stock_codes):
+            st = portfolio.get_state(code)
+            for tx in st.history:
+                action_map = {
+                    "buy": "買進", "sell": "賣出", "dividend": "現金股利",
+                    "dividend_reinvest": "股利再投資", "stock_dividend": "股票股利",
+                }
+                status = "已封存" if st.archived else "活躍"
+                w.writerow([
+                    tx.date, code, action_map.get(tx.action, tx.action),
+                    tx.price, tx.shares, tx.fee, tx.tax, tx.total_amount,
+                    status, tx.remark,
+                ])
+                count += 1
+
+        csv_content = output.getvalue()
+        today = datetime.now().strftime("%Y-%m-%d")
+        filename = f"StockTracker_{today}.csv"
+
+        response = make_response(csv_content)
+        response.headers["Content-Type"] = "text/csv; charset=utf-8-sig"
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

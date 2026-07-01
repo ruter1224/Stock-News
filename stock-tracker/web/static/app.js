@@ -437,8 +437,26 @@ async function importCsv() {
 }
 
 async function exportCsv() {
-    const result = await api('/api/export/csv');
-    if (result) showToast(result.message, 'success');
+    try {
+        const res = await fetch('/api/export/csv');
+        if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || '匯出失敗', 'error');
+            return;
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast('匯出成功', 'success');
+    } catch (e) {
+        showToast('匯出失敗: ' + e.message, 'error');
+    }
 }
 
 // ====== Config ======
