@@ -111,6 +111,15 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
             )
             rows.append((stock_code, tx))
 
+    # 找出 CSV 中有 init 記錄的股票，匯入前先清空這些股票的狀態
+    # 這樣匯出 → 再匯入的 roundtrip 不會累積重複記錄
+    stocks_to_reset = set()
+    for stock_code, tx in rows:
+        if tx.action == "init":
+            stocks_to_reset.add(stock_code)
+    for code in stocks_to_reset:
+        portfolio.remove_stock(code)
+
     applied = 0
     for stock_code, tx in rows:
         portfolio.add_transaction(stock_code, tx, config)

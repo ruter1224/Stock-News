@@ -243,7 +243,6 @@ def refresh_prices():
     if not codes:
         return jsonify({"error": "投資組合為空"}), 400
     init_price_cache(str(DATA_DIR))
-    clear_price_cache()
     prices = fetch_prices(codes)
     ok = sum(1 for v in prices.values() if v[0] is not None)
     return jsonify({"message": f"成功更新 {ok}/{len(codes)} 檔股價", "ok": ok, "total": len(codes)})

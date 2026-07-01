@@ -6,7 +6,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-CACHE_TTL = 300
+CACHE_TTL = 1800
 _CACHE = {}
 _CACHE_PATH = None
 

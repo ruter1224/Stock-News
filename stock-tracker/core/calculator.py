@@ -160,7 +160,6 @@ def init_holding(state, tx, config):
     new_cost = round(tx.total_amount, 2)
     avg = new_cost / new_shares if new_shares > 0 else 0.0
 
-    # 自動解封：如果之前已封存，現在重新設定持倉
     if state.archived:
         tx.remark = "重新買入"
 

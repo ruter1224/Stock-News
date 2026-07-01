@@ -40,8 +40,6 @@ async function api(path, opts) {
 }
 
 // ====== Dashboard ======
-let _pricesFetchedOnStartup = false;
-
 async function loadDashboard() {
     const data = await api('/api/portfolio');
     if (!data) return;
@@ -76,12 +74,6 @@ async function loadDashboard() {
     }
 
     renderPieChart(data.stocks);
-
-    // Fetch prices once on startup
-    if (!_pricesFetchedOnStartup && data.count > 0) {
-        _pricesFetchedOnStartup = true;
-        refreshPrices();
-    }
 }
 
 function renderPieChart(stocks) {
