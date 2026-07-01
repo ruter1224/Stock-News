@@ -51,7 +51,7 @@ def _stock_summary(code):
         "current_price": price,
         "market_value": round((price or 0) * state.shares, 2) if price else 0,
         "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
-        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if rep.unrealized_pl_pct is not None else 0,
         "is_zero_cost": state.is_zero_cost,
     }
 
@@ -127,7 +127,7 @@ def get_stock_detail(code):
         "current_price": price,
         "market_value": round((price or 0) * state.shares, 2) if price else 0,
         "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
-        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if rep.unrealized_pl_pct is not None else 0,
         "is_zero_cost": state.is_zero_cost,
         "history": history,
     })
