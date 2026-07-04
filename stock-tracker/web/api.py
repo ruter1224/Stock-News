@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from flask import Blueprint, jsonify, request
 from core.portfolio import Portfolio
@@ -9,13 +10,25 @@ from data.importer import parse_trades_csv, export_trades_csv
 from core.models import Transaction
 from core.history import init_history_dir, download_history, update_history, list_history_codes, history_exists
 from core.backtest import single_stock_backtest, portfolio_backtest
+from core.news import init_cache as init_news_cache, get_news_page, refresh_news
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+_data_dir_env = os.environ.get("STOCK_TRACKER_DATA_DIR")
+if _data_dir_env:
+    DATA_DIR = Path(_data_dir_env) / "data"
+else:
+    DATA_DIR = Path(__file__).parent.parent / "data"
 STATE_FILE = str(DATA_DIR / "state.json")
+
+if not DATA_DIR.exists():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+if not Path(STATE_FILE).exists():
+    from core.portfolio import Portfolio as _P
+    save_portfolio(_P(), STATE_FILE)
 
 portfolio = load_portfolio(STATE_FILE)
 cfg = Config()
 init_history_dir(str(DATA_DIR))
+init_news_cache(str(DATA_DIR))
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -26,7 +39,7 @@ def _save():
 
 def _stock_summary(code):
     state = portfolio.get_state(code)
-    price, name = fetch_price_safe(code)
+    price, name = _get_cached_price(code)
     rep = generate_report(state, current_price=price)
     return {
         "code": code,
@@ -36,11 +49,21 @@ def _stock_summary(code):
         "total_cost": round(state.total_cost, 2),
         "avg_cost": round(state.avg_cost, 2),
         "current_price": price,
-        "market_value": round((price or 0) * state.shares, 2) if price else rep.current_value,
-        "unrealized_pl": round(rep.total_pl, 2),
-        "unrealized_pl_pct": round(rep.total_roi_pct, 2),
+        "market_value": round((price or 0) * state.shares, 2) if price else 0,
+        "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if rep.unrealized_pl_pct is not None else 0,
         "is_zero_cost": state.is_zero_cost,
+        "archived": state.archived,
     }
+
+
+def _get_cached_price(code):
+    """Read price from cache without triggering a fetch."""
+    from core.prices import _CACHE
+    entry = _CACHE.get(code)
+    if entry:
+        return entry.get("price"), entry.get("name", "")
+    return None, ""
 
 
 def fetch_price_safe(code):
@@ -55,7 +78,7 @@ def fetch_price_safe(code):
 
 @api.route("/portfolio")
 def get_portfolio():
-    codes = sorted(portfolio.stock_codes)
+    codes = sorted(portfolio.active_stock_codes)
     stocks = [_stock_summary(c) for c in codes]
     total_value = sum(s["market_value"] for s in stocks)
     total_cost = sum(s["total_cost"] for s in stocks)
@@ -73,12 +96,22 @@ def get_portfolio():
     })
 
 
+@api.route("/portfolio/archived")
+def get_archived_portfolio():
+    codes = sorted(portfolio.archived_stock_codes)
+    stocks = [_stock_summary(c) for c in codes]
+    return jsonify({
+        "stocks": stocks,
+        "count": len(stocks),
+    })
+
+
 @api.route("/portfolio/<code>")
 def get_stock_detail(code):
     state = portfolio.get_state(code)
     if not state or not state.history:
         return jsonify({"error": "找不到該股票"}), 404
-    price, name = fetch_price_safe(code)
+    price, name = _get_cached_price(code)
     rep = generate_report(state, current_price=price)
     history = []
     for tx in state.history:
@@ -93,6 +126,7 @@ def get_stock_detail(code):
             "total_amount": tx.total_amount,
             "fee": tx.fee,
             "tax": tx.tax,
+            "remark": tx.remark,
         })
     return jsonify({
         "code": code,
@@ -102,9 +136,9 @@ def get_stock_detail(code):
         "total_cost": round(state.total_cost, 2),
         "avg_cost": round(state.avg_cost, 2),
         "current_price": price,
-        "market_value": round((price or 0) * state.shares, 2) if price else rep.current_value,
-        "unrealized_pl": round(rep.total_pl, 2),
-        "unrealized_pl_pct": round(rep.total_roi_pct, 2),
+        "market_value": round((price or 0) * state.shares, 2) if price else 0,
+        "unrealized_pl": round(rep.unrealized_pl, 2) if price else 0,
+        "unrealized_pl_pct": round(rep.unrealized_pl_pct, 2) if rep.unrealized_pl_pct is not None else 0,
         "is_zero_cost": state.is_zero_cost,
         "history": history,
     })
@@ -223,7 +257,6 @@ def refresh_prices():
     if not codes:
         return jsonify({"error": "投資組合為空"}), 400
     init_price_cache(str(DATA_DIR))
-    clear_price_cache()
     prices = fetch_prices(codes)
     ok = sum(1 for v in prices.values() if v[0] is not None)
     return jsonify({"message": f"成功更新 {ok}/{len(codes)} 檔股價", "ok": ok, "total": len(codes)})
@@ -236,6 +269,7 @@ def get_config():
         "tax_rate_listed": cfg.tax_rate_listed,
         "tax_rate_otc": cfg.tax_rate_otc,
         "tax_rate_etf": cfg.tax_rate_etf,
+        "reinvest_mode": cfg.reinvest_mode,
     })
 
 
@@ -247,6 +281,8 @@ def update_config():
         cfg.tax_rate_listed = float(data.get("tax_rate_listed", cfg.tax_rate_listed))
         cfg.tax_rate_otc = float(data.get("tax_rate_otc", cfg.tax_rate_otc))
         cfg.tax_rate_etf = float(data.get("tax_rate_etf", cfg.tax_rate_etf))
+        if "reinvest_mode" in data:
+            cfg.reinvest_mode = data["reinvest_mode"]
         return jsonify({"message": "設定已更新"})
     except ValueError:
         return jsonify({"error": "請輸入有效的數值"}), 400
@@ -283,9 +319,39 @@ def import_csv():
 @api.route("/export/csv", methods=["GET"])
 def export_csv():
     try:
-        out = str(DATA_DIR / "trades_export.csv")
-        n = export_trades_csv(portfolio, out)
-        return jsonify({"message": f"已匯出 {n} 檔股票", "path": out})
+        from datetime import datetime
+        from flask import make_response
+        import io
+        import csv as csv_module
+
+        output = io.StringIO()
+        w = csv_module.writer(output)
+        w.writerow(["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅", "成交金額", "狀態", "備註"])
+
+        count = 0
+        for code in sorted(portfolio.stock_codes):
+            st = portfolio.get_state(code)
+            for tx in st.history:
+                action_map = {
+                    "buy": "買進", "sell": "賣出", "dividend": "現金股利",
+                    "dividend_reinvest": "股利再投資", "stock_dividend": "股票股利",
+                }
+                status = "已封存" if st.archived else "活躍"
+                w.writerow([
+                    tx.date, code, action_map.get(tx.action, tx.action),
+                    tx.price, tx.shares, tx.fee, tx.tax, tx.total_amount,
+                    status, tx.remark,
+                ])
+                count += 1
+
+        csv_content = output.getvalue()
+        today = datetime.now().strftime("%Y-%m-%d")
+        filename = f"StockTracker_{today}.csv"
+
+        response = make_response(csv_content)
+        response.headers["Content-Type"] = "text/csv; charset=utf-8-sig"
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -307,6 +373,24 @@ def get_summary():
             "zero_cost": state.is_zero_cost,
         })
     return jsonify(items)
+
+
+# ====== News ======
+
+@api.route("/news")
+def get_news():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    per_page = min(per_page, 50)
+    return jsonify(get_news_page(page=page, per_page=per_page))
+
+
+@api.route("/news/refresh", methods=["POST"])
+def refresh_news_api():
+    result = refresh_news()
+    if "error" in result:
+        return jsonify(result), 429
+    return jsonify(result)
 
 
 # ====== Backtest ======

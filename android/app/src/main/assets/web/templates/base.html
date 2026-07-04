@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Tracker - 股票成本計算系統</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="dashboard">
+                <span class="icon">&#x1F4CA;</span>持有總覽
+            </button>
+            <button class="tab-btn" data-tab="stock">
+                <span class="icon">&#x1F4CB;</span>個股管理
+            </button>
+            <button class="tab-btn" data-tab="etf">
+                <span class="icon">&#x1F4CB;</span>ETF管理
+            </button>
+            <button class="tab-btn" data-tab="backtest">
+                <span class="icon">&#x1F4C8;</span>回測
+            </button>
+            <button class="tab-btn" data-tab="settings">
+                <span class="icon">&#x2699;</span>設定
+            </button>
+        </div>
+
+        <div id="tab-dashboard" class="tab-content active">{% block dashboard %}{% endblock %}</div>
+        <div id="tab-stock" class="tab-content">{% block stock_detail %}{% endblock %}</div>
+        <div id="tab-etf" class="tab-content">{% block etf_detail %}{% endblock %}</div>
+        <div id="tab-backtest" class="tab-content">{% block backtest %}{% endblock %}</div>
+        <div id="tab-settings" class="tab-content">{% block settings %}{% endblock %}</div>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal" id="modal-content"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/chart.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

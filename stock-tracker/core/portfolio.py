@@ -62,6 +62,16 @@ class Portfolio:
     def stock_codes(self):
         return list(self.stocks.keys())
 
+    @property
+    def active_stock_codes(self):
+        """只回傳活躍（未封存）的股票代碼"""
+        return [code for code, state in self.stocks.items() if not state.archived]
+
+    @property
+    def archived_stock_codes(self):
+        """只回傳已封存的股票代碼"""
+        return [code for code, state in self.stocks.items() if state.archived]
+
     def to_dict(self):
         return {code: state.to_dict() for code, state in self.stocks.items()}
 

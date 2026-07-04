@@ -18,6 +18,7 @@ class Config:
         self.tax_rate_etf = DEFAULT_TAX_RATE_ETF
         self.exchange = "listed"
         self.is_etf = False
+        self.reinvest_mode = "direct"  # "direct" 或 "match"
 
     @property
     def tax_rate(self):
@@ -42,6 +43,7 @@ class Config:
         self.tax_rate_otc = DEFAULT_TAX_RATE_OTC
         self.tax_rate_etf = DEFAULT_TAX_RATE_ETF
         self.is_etf = False
+        self.reinvest_mode = "direct"
 
     def to_dict(self):
         return {
@@ -51,6 +53,7 @@ class Config:
             "tax_rate_etf": self.tax_rate_etf,
             "exchange": self.exchange,
             "is_etf": self.is_etf,
+            "reinvest_mode": self.reinvest_mode,
         }
 
     @classmethod
@@ -62,4 +65,5 @@ class Config:
         cfg.tax_rate_etf = data.get("tax_rate_etf", DEFAULT_TAX_RATE_ETF)
         cfg.exchange = data.get("exchange", "listed")
         cfg.is_etf = data.get("is_etf", False)
+        cfg.reinvest_mode = data.get("reinvest_mode", "direct")
         return cfg

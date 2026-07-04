@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Tracker 桌機版使用說明書</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        header {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #fff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        header h1 { font-size: 2.2em; margin-bottom: 10px; }
+        header p { font-size: 1.1em; opacity: 0.9; }
+        .version { 
+            display: inline-block; 
+            background: rgba(255,255,255,0.2); 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.9em; 
+            margin-top: 10px; 
+        }
+        nav {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav h3 { margin-bottom: 10px; color: #1a237e; }
+        nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+        nav li a {
+            display: block;
+            padding: 6px 14px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        nav li a:hover { background: #1a237e; color: #fff; border-color: #1a237e; }
+        main { padding: 30px; }
+        section { margin-bottom: 40px; }
+        h2 {
+            color: #1a237e;
+            border-bottom: 3px solid #1a237e;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        h3 {
+            color: #283593;
+            margin: 20px 0 10px;
+            font-size: 1.2em;
+        }
+        h4 { color: #455a64; margin: 15px 0 8px; }
+        p { margin-bottom: 12px; }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #1a237e;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step-num {
+            display: inline-block;
+            background: #1a237e;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .code-box {
+            background: #263238;
+            color: #aed581;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-family: "Consolas", monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .info-box::before {
+            content: "💡 ";
+            font-size: 1.2em;
+        }
+        .warning-box {
+            background: #fff3e0;
+            border: 1px solid #ffb74d;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .warning-box::before {
+            content: "⚠️ ";
+            font-size: 1.2em;
+        }
+        .ui-mock {
+            background: #fafafa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: "Consolas", monospace;
+            font-size: 0.9em;
+        }
+        .ui-mock .tab-bar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #1a237e;
+        }
+        .ui-mock .tab {
+            padding: 8px 16px;
+            background: #e8eaf6;
+            border-radius: 6px 6px 0 0;
+            font-size: 0.85em;
+        }
+        .ui-mock .tab.active { background: #1a237e; color: #fff; }
+        .ui-mock .card-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .ui-mock .card {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+        .ui-mock .card-label { font-size: 0.75em; color: #888; }
+        .ui-mock .card-value { font-size: 1.3em; font-weight: bold; color: #1a237e; }
+        .ui-mock .btn-mock {
+            display: inline-block;
+            padding: 6px 14px;
+            background: #1a237e;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin: 2px;
+        }
+        .ui-mock .btn-mock.secondary { background: #757575; }
+        .ui-mock .btn-mock.success { background: #2e7d32; }
+        .ui-mock .btn-mock.danger { background: #c62828; }
+        .ui-mock .table-mock {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.85em;
+        }
+        .ui-mock .table-mock th {
+            background: #e8eaf6;
+            padding: 8px;
+            text-align: left;
+        }
+        .ui-mock .table-mock td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table.data-table th {
+            background: #e8eaf6;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        table.data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        table.data-table tr:hover { background: #f5f5f5; }
+        ul, ol { margin: 10px 0 10px 25px; }
+        li { margin-bottom: 5px; }
+        .faq-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .faq-q {
+            background: #f5f5f5;
+            padding: 12px 18px;
+            font-weight: 600;
+            color: #1a237e;
+        }
+        .faq-a { padding: 12px 18px; }
+        footer {
+            background: #263238;
+            color: #aaa;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.6em; }
+            main { padding: 15px; }
+            nav ul { gap: 5px; }
+            nav li a { padding: 4px 10px; font-size: 0.8em; }
+            .ui-mock .card-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Stock Tracker</h1>
+            <p>股票交易帳本 — 桌機版使用說明書</p>
+            <span class="version">v1.2 | 2026-07-01</span>
+        </header>
+
+        <nav>
+            <h3>📑 目錄</h3>
+            <ul>
+                <li><a href="#intro">簡介</a></li>
+                <li><a href="#install">安裝與啟動</a></li>
+                <li><a href="#ui">介面導覽</a></li>
+                <li><a href="#dashboard">持有總覽</a></li>
+                <li><a href="#stock">個股管理</a></li>
+                <li><a href="#etf">ETF 管理</a></li>
+                <li><a href="#backtest">回測分析</a></li>
+                <li><a href="#settings">設定</a></li>
+                <li><a href="#faq">常見問題</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="intro">
+                <h2>一、簡介</h2>
+                <p><strong>Stock Tracker</strong> 是一款專為台灣股票投資人設計的交易紀錄管理工具，幫助您追蹤持股成本、計算損益、管理股利，並提供歷史回測功能。</p>
+                
+                <h3>主要功能</h3>
+                <ul>
+                    <li>📈 <strong>持股管理</strong> — 記錄買入、賣出、股利等交易</li>
+                    <li>💰 <strong>成本計算</strong> — 自動計算均價、總成本、零成本狀態</li>
+                    <li>📊 <strong>即時股價</strong> — 自動抓取 Yahoo 股市即時報價</li>
+                    <li>📉 <strong>歷史回測</strong> — 分析投資組合歷史表現</li>
+                    <li>📥 <strong>CSV 匯入匯出</strong> — 支援券商交易明細匯入</li>
+                    <li>🔄 <strong>再投資對沖</strong> — 股利再投資自動降低持有成本</li>
+                    <li>🥧 <strong>圓餅圖</strong> — 視覺化持股分佈</li>
+                </ul>
+
+                <h3>系統需求</h3>
+                <table class="data-table">
+                    <tr><th>項目</th><th>需求</th></tr>
+                    <tr><td>作業系統</td><td>Windows 10 / 11 (64-bit)</td></tr>
+                    <tr><td>瀏覽器</td><td>Chrome / Edge / Firefox (最新版)</td></tr>
+                    <tr><td>硬碟空間</td><td>約 50 MB</td></tr>
+                    <tr><td>網路</td><td>需要（抓取股價用）</td></tr>
+                </table>
+            </section>
+
+            <section id="install">
+                <h2>二、安裝與啟動</h2>
+                
+                <h3>步驟 1：取得程式</h3>
+                <p>將 <code>StockTracker.exe</code> 複製到您想要存放的資料夾，例如：</p>
+                <div class="code-box">C:\Programs\StockTracker\StockTracker.exe</div>
+
+                <h3>步驟 2：首次啟動</h3>
+                <div class="step">
+                    <span class="step-num">1</span> 雙擊 <code>StockTracker.exe</code>
+                </div>
+                <div class="step">
+                    <span class="step-num">2</span> 會開啟一個黑色命令列視窗，顯示：
+                    <div class="code-box">
+==================================================
+  Stock Tracker - 股票交易帳本
+==================================================
+
+  資料目錄: C:\Programs\StockTracker\data
+  正在啟動伺服器 (port 5000)...
+  瀏覽器將自動開啟 http://127.0.0.1:5000
+
+  關閉此視窗即可停止伺服器
+--------------------------------------------------
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">3</span> 瀏覽器會自動開啟，顯示 Stock Tracker 介面
+                </div>
+
+                <div class="info-box">
+                    程式會在 exe 同目錄下自動建立 <code>data</code> 資料夾，存放您的交易資料。請不要刪除這個資料夾。
+                </div>
+
+                <h3>步驟 3：停止程式</h3>
+                <p>直接關閉黑色命令列視窗即可。</p>
+
+                <div class="warning-box">
+                    請勿直接關閉瀏覽器來停止程式，應該關閉命令列視窗。否則伺服器會持續在背景執行。
+                </div>
+            </section>
+
+            <section id="ui">
+                <h2>三、介面導覽</h2>
+                
+                <p>Stock Tracker 使用網頁介面，上方有 5 個分頁標籤：</p>
+
+                <div class="ui-mock">
+                    <div class="tab-bar">
+                        <div class="tab active">📊 持有總覽</div>
+                        <div class="tab">📋 個股管理</div>
+                        <div class="tab">📋 ETF管理</div>
+                        <div class="tab">📈 回測</div>
+                        <div class="tab">⚙️ 設定</div>
+                    </div>
+                    <p style="text-align:center;color:#888;">點擊分頁切換不同功能頁面</p>
+                </div>
+
+                <table class="data-table">
+                    <tr><th>分頁</th><th>功能說明</th></tr>
+                    <tr><td><strong>📊 持有總覽</strong></td><td>投資組合總覽、持股列表、圓餅圖、快速操作</td></tr>
+                    <tr><td><strong>📋 個股管理</strong></td><td>新增/管理個股、查看交易歷史</td></tr>
+                    <tr><td><strong>📋 ETF 管理</strong></td><td>新增/管理 ETF、查看交易歷史</td></tr>
+                    <tr><td><strong>📈 回測</strong></td><td>歷史回測分析、權益曲線、回撤分析</td></tr>
+                    <tr><td><strong>⚙️ 設定</strong></td><td>手續費率、交易稅率、再投資模式、快取管理</td></tr>
+                </table>
+            </section>
+
+            <section id="dashboard">
+                <h2>四、持有總覽</h2>
+                
+                <p>這是您開啟程式後的首頁，顯示投資組合的整體狀況。</p>
+
+                <h3>介面說明</h3>
+                <div class="ui-mock">
+                    <div class="card-row">
+                        <div class="card">
+                            <div class="card-label">持股檔數</div>
+                            <div class="card-value">5</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">總市值</div>
+                            <div class="card-value">$523,400</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">總損益</div>
+                            <div class="card-value" style="color:#2e7d32;">+$42,300</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">總報酬率</div>
+                            <div class="card-value" style="color:#2e7d32;">+8.76%</div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="btn-mock">🔄 重新整理股價</span>
+                        <span class="btn-mock secondary">📥 匯入 CSV</span>
+                        <span class="btn-mock secondary">📤 匯出報表</span>
+                    </div>
+                </div>
+
+                <h3>操作說明</h3>
+                
+                <h4>🔄 重新整理股價</h4>
+                <p>點擊後會向 Yahoo 股市抓取最新股價，更新所有持股的現價與損益。</p>
+                <div class="info-box">股價快取時間為 30 分鐘，同一檔股票在 30 分鐘內不會重複抓取。</div>
+
+                <h4>📥 匯入 CSV</h4>
+                <p>匯入券商提供的交易明細 CSV 檔案。支援格式：</p>
+                <ul>
+                    <li>富邦證券</li>
+                    <li>元大證券</li>
+                    <li>統一證券</li>
+                    <li>其他券商（需符合特定格式）</li>
+                </ul>
+
+                <h4>📤 匯出報表</h4>
+                <p>將目前投資組合的交易紀錄匯出為 CSV 檔案，可用於備份或其他軟體分析。</p>
+
+                <h3>持股列表</h3>
+                <div class="ui-mock">
+                    <table class="table-mock">
+                        <tr>
+                            <th>代碼</th><th>類型</th><th>股數</th><th>均價</th><th>現價</th><th>市值</th><th>未實現</th><th>報酬率</th><th>零成本</th>
+                        </tr>
+                        <tr>
+                            <td>2330</td><td><span style="background:#e8eaf6;padding:2px 6px;border-radius:3px;">個股</span></td><td>1,000</td><td>580.00</td><td>620.00</td><td>620,000</td><td style="color:#2e7d32;">+40,000</td><td style="color:#2e7d32;">+6.90%</td><td style="color:#888;">X</td>
+                        </tr>
+                        <tr>
+                            <td>0050</td><td><span style="background:#c8e6c9;padding:2px 6px;border-radius:3px;">ETF</span></td><td>2,000</td><td>72.50</td><td>78.30</td><td>156,600</td><td style="color:#2e7d32;">+11,600</td><td style="color:#2e7d32;">+7.99%</td><td style="color:#888;">X</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h3>零成本統計</h3>
+                <p>顯示已達到「零成本」狀態的股票數量。零成本表示已透過股利回收全部初始投資。</p>
+            </section>
+
+            <section id="stock">
+                <h2>五、個股管理</h2>
+                
+                <p>在此頁面可以新增個股、記錄交易、查看歷史。</p>
+
+                <h3>新增個股</h3>
+                <div class="step">
+                    <span class="step-num">1</span> 點擊 <span class="btn-mock success" style="display:inline;">📅 新增個股</span> 按鈕
+                </div>
+                <div class="step">
+                    <span class="step-num">2</span> 在彈出視窗中填寫：
+                    <ul>
+                        <li><strong>股票代碼</strong>：例如 2330</li>
+                        <li><strong>股數</strong>：持有股數（張 × 1000）</li>
+                        <li><strong>總成本</strong>：含手續費的總金額</li>
+                        <li><strong>日期</strong>：買入日期</li>
+                    </ul>
+                </div>
+                <div class="step">
+                    <span class="step-num">3</span> 點擊「確定」完成新增
+                </div>
+
+                <h3>記錄交易</h3>
+                <p>選擇股票後，可以進行以下操作：</p>
+                
+                <div class="ui-mock">
+                    <div>
+                        <span class="btn-mock success">+ 買入</span>
+                        <span class="btn-mock danger">- 賣出</span>
+                        <span class="btn-mock" style="background:#f57c00;">$ 現金股利</span>
+                        <span class="btn-mock" style="background:#7b1fa2;">~ 股票股利</span>
+                        <span class="btn-mock" style="background:#0277bd;">↻ 再投資</span>
+                    </div>
+                </div>
+
+                <h4>買入操作</h4>
+                <p>填寫日期、價格、股數，以及手續費（或總支出）。</p>
+
+                <h4>賣出操作</h4>
+                <p>填寫日期、價格、股數，以及手續費和交易稅（或總收入）。</p>
+                <div class="info-box">
+                    <strong>模式切換</strong>：買入/賣出對話框可以切換「明細模式」和「總額模式」。<br>
+                    • 明細模式：分別填寫手續費、交易稅<br>
+                    • 總額模式：直接填寫總支出或總收入
+                </div>
+
+                <h4>現金股利</h4>
+                <p>填寫日期和股利總額（每股股利 × 股數）。</p>
+
+                <h4>股票股利</h4>
+                <p>填寫日期和增加的股數。</p>
+
+                <h4>股利再投資</h4>
+                <p>將股利再投資買入同一檔股票，填寫日期、價格、股數。</p>
+                <div class="warning-box">
+                    <strong>再投資對沖機制</strong>：再投資時，系統會依據設定模式計算成本：<br>
+                    • 模式 A（直接扣成本）：再投資金額直接從總成本扣除，均價隨之下降<br>
+                    • 模式 B（需有股利才能扣）：再投資金額最多扣到已收現金股利總額，超過部分當一般買入<br>
+                    • 如果沒有現金股利記錄，系統會自動備註「無對應股利記錄」
+                </div>
+
+                <h3>交易歷史</h3>
+                <p>每筆交易都會記錄詳細資訊，最新加入的「備註」欄位會顯示再投資對沖狀態。</p>
+                <div class="ui-mock">
+                    <table class="table-mock">
+                        <tr><th>日期</th><th>類型</th><th>價格</th><th>股數</th><th>金額</th><th>手續費</th><th>稅</th><th>備註</th><th></th></tr>
+                        <tr><td>2024-03-15</td><td><span style="background:#c8e6c9;padding:2px 6px;border-radius:3px;">買入</span></td><td>580.00</td><td>1,000</td><td>580,000</td><td>827</td><td>0</td><td></td><td></td></tr>
+                        <tr><td>2024-06-20</td><td><span style="background:#fff9c4;padding:2px 6px;border-radius:3px;">現金股利</span></td><td>-</td><td>-</td><td>12,000</td><td>0</td><td>0</td><td></td><td></td></tr>
+                        <tr><td>2024-07-01</td><td><span style="background:#e1bee7;padding:2px 6px;border-radius:3px;">再投資</span></td><td>60.00</td><td>200</td><td>12,000</td><td>0</td><td>0</td><td style="font-size:0.85em;color:#888;">已對沖 12,000</td><td></td></tr>
+                    </table>
+                </div>
+            </section>
+
+            <section id="etf">
+                <h2>六、ETF 管理</h2>
+                
+                <p>ETF 管理與個股管理操作方式相同，差別在於：</p>
+                <ul>
+                    <li>ETF 的交易稅率較低（預設 0.1%）</li>
+                    <li>系統會自動識別 ETF（代號為 00 開頭）</li>
+                </ul>
+
+                <p>常見 ETF 代碼：</p>
+                <table class="data-table">
+                    <tr><th>代碼</th><th>名稱</th><th>類型</th></tr>
+                    <tr><td>0050</td><td>元大台灣 50</td><td>ETF</td></tr>
+                    <tr><td>0056</td><td>元大高股息</td><td>ETF</td></tr>
+                    <tr><td>006208</td><td>富邦台 50</td><td>ETF</td></tr>
+                    <tr><td>00878</td><td>國泰永續高股息</td><td>ETF</td></tr>
+                    <tr><td>00919</td><td>群益台灣精選高股息</td><td>ETF</td></tr>
+                </table>
+            </section>
+
+            <section id="backtest">
+                <h2>七、回測分析</h2>
+                
+                <p>回測功能可以分析您的投資組合在歷史上的表現。</p>
+
+                <h3>使用步驟</h3>
+                <div class="step">
+                    <span class="step-num">1</span> 切換到「📈 回測」分頁
+                </div>
+                <div class="step">
+                    <span class="step-num">2</span> 選擇回測標的：
+                    <ul>
+                        <li><strong>整體投資組合</strong>：分析所有持股</li>
+                        <li><strong>單一股票</strong>：分析特定股票</li>
+                    </ul>
+                </div>
+                <div class="step">
+                    <span class="step-num">3</span> 選擇回測期間：1 年 / 3 年 / 5 年 / 10 年
+                </div>
+                <div class="step">
+                    <span class="step-num">4</span> 點擊「🔄 執行回測」
+                </div>
+
+                <div class="warning-box">
+                    首次執行回測前，需要先點擊「📥 下載歷史股價」來取得歷史資料。
+                </div>
+
+                <h3>回測結果</h3>
+                
+                <h4>績效指標</h4>
+                <div class="ui-mock">
+                    <div class="card-row">
+                        <div class="card">
+                            <div class="card-label">總報酬率</div>
+                            <div class="card-value" style="color:#2e7d32;">+45.23%</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">年化報酬 (CAGR)</div>
+                            <div class="card-value" style="color:#2e7d32;">+12.5%</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">最大回撤</div>
+                            <div class="card-value" style="color:#c62828;">-18.3%</div>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div class="card">
+                            <div class="card-label">大盤報酬</div>
+                            <div class="card-value" style="color:#2e7d32;">+38.15%</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">年化波動率</div>
+                            <div class="card-value">15.2%</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">Sharpe Ratio</div>
+                            <div class="card-value">1.25</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h4>權益曲線</h4>
+                <p>顯示投資組合價值隨時間的變化，與大盤（加權指數）比較。</p>
+
+                <h4>回撤曲線</h4>
+                <p>顯示投資組合從高點回落的幅度，幫助評估風險。</p>
+            </section>
+
+            <section id="settings">
+                <h2>八、設定</h2>
+                
+                <h3>費率設定</h3>
+                <div class="ui-mock">
+                    <table class="table-mock">
+                        <tr><td><strong>手續費率</strong></td><td>0.001425 (0.1425%)</td></tr>
+                        <tr><td><strong>個股交易稅 (上市)</strong></td><td>0.003 (0.3%)</td></tr>
+                        <tr><td><strong>個股交易稅 (上櫃)</strong></td><td>0.003 (0.3%)</td></tr>
+                        <tr><td><strong>ETF 交易稅</strong></td><td>0.001 (0.1%)</td></tr>
+                    </table>
+                    <div style="margin-top:10px;">
+                        <span class="btn-mock">儲存</span>
+                        <span class="btn-mock secondary">恢復預設</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    修改費率後，只有「新交易」會使用新費率。已存在的交易紀錄不會重新計算。
+                </div>
+
+                <h3>再投資模式</h3>
+                <p>在設定頁面可以選擇股利再投資時的成本計算方式：</p>
+                <div class="ui-mock">
+                    <table class="table-mock">
+                        <tr><td><strong>模式 A：直接扣成本</strong></td><td>所有再投資金額直接從總成本扣除，不管有沒有收過股利。如果沒有股利記錄，會自動備註「無對應股利記錄」</td></tr>
+                        <tr><td><strong>模式 B：需有股利才能扣</strong></td><td>再投資金額最多扣到已收現金股利總額，超過部分當一般買入計入成本</td></tr>
+                    </table>
+                </div>
+
+                <h4>範例說明</h4>
+                <p>持有 1,000 股，成本 50,000 元（均價 50.00）</p>
+                <table class="data-table">
+                    <tr><th>操作</th><th>模式 A 結果</th><th>模式 B 結果</th></tr>
+                    <tr>
+                        <td>① 收到股利 12,000 元</td>
+                        <td>成本 50,000（不變），已收股利 +12,000</td>
+                        <td>同左</td>
+                    </tr>
+                    <tr>
+                        <td>② 再投資 12,000 元（200 股）</td>
+                        <td>成本 50,000 - 12,000 = <strong>38,000</strong><br>均價 38,000 / 1,200 = <strong>31.67</strong></td>
+                        <td>同左</td>
+                    </tr>
+                    <tr>
+                        <td>③ 再投資 15,000 元（超額，無股利）</td>
+                        <td>成本 50,000 - 15,000 = <strong>35,000</strong><br>備註：無對應股利記錄</td>
+                        <td>可扣 12,000，超額 3,000 計入<br>成本 50,000 - 12,000 + 3,000 = <strong>41,000</strong></td>
+                    </tr>
+                </table>
+
+                <h3>股價快取管理</h3>
+                <p>點擊「清除快取」可以清除所有股價快取，下次更新股價時會重新抓取。</p>
+            </section>
+
+            <section id="faq">
+                <h2>九、常見問題</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-q">Q：開啟程式後瀏覽器沒有自動開啟？</div>
+                    <div class="faq-a">
+                        <p>請手動開啟瀏覽器，前往 <code>http://127.0.0.1:5000</code></p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：顯示「網路錯誤」或股價無法更新？</div>
+                    <div class="faq-a">
+                        <p>請檢查網路連線。程式需要連線到 Yahoo 股市抓取股價。如果網路正常但仍無法更新，可能是 Yahoo API 暫時無法使用，請稍後再試。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：如何備份我的資料？</div>
+                    <div class="faq-a">
+                        <p>您的交易資料存放在 <code>data</code> 資料夾中。定期複製整個 <code>data</code> 資料夾即可備份。也可以使用「匯出 CSV」功能匯出交易紀錄。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：如何在另一台電腦使用？</div>
+                    <div class="faq-a">
+                        <ol>
+                            <li>複製 <code>StockTracker.exe</code> 到新電腦</li>
+                            <li>複製 <code>data</code> 資料夾到同目錄下（如果要保留舊資料）</li>
+                            <li>雙擊 exe 即可使用</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：程式佔用多少記憶體？</div>
+                    <div class="faq-a">
+                        <p>正常運作時約佔用 50-100 MB 記憶體。關閉命令列視窗後會完全釋放。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：可以同時開啟多個視窗嗎？</div>
+                    <div class="faq-a">
+                        <p>可以開啟多個瀏覽器分頁，但建議只使用一個。多個程式實例可能會造成資料衝突。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：Port 5000 已被佔用怎麼辦？</div>
+                    <div class="faq-a">
+                        <p>目前版本固定使用 Port 5000。如果該 Port 已被其他程式使用，請先關閉該程式，或聯繫開發者支援自訂 Port。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">Q：如何完全移除程式？</div>
+                    <div class="faq-a">
+                        <ol>
+                            <li>關閉命令列視窗</li>
+                            <li>刪除 <code>StockTracker.exe</code></li>
+                            <li>刪除 <code>data</code> 資料夾（如果不需要保留資料）</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Stock Tracker v1.2 | 最後更新：2026-07-01</p>
+            <p>如有問題或建議，請聯繫開發團隊</p>
+        </footer>
+    </div>
+</body>
+</html>

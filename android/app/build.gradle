@@ -1,0 +1,65 @@
+plugins {
+    id "com.android.application"
+    id "com.chaquo.python"
+    id "org.jetbrains.kotlin.android"
+}
+
+android {
+    namespace "com.stocktracker.app"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.stocktracker.app"
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
+        }
+
+        python {
+            version "3.11"
+            pip {
+                install "flask"
+                install "requests"
+                install "urllib3"
+            }
+            buildPython "C:\\Users\\tcme-151\\AppData\\Local\\Programs\\Python\\Python311\\python.exe"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main {
+            python.srcDir "src/main/python"
+        }
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core-ktx:1.12.0"
+    implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "com.google.android.material:material:1.11.0"
+    implementation "androidx.constraintlayout:constraintlayout:2.1.4"
+    implementation "androidx.webkit:webkit:1.9.0"
+}
