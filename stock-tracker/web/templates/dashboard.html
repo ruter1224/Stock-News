@@ -9,6 +9,34 @@
     <div class="card"><div class="card-label">總報酬率</div><div class="card-value" id="d-roi">-</div></div>
 </div>
 
+<div class="fund-pool-summary">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:600;color:var(--gray-800)">&#x1F4B0; 資金池總覽</div>
+        <button class="btn btn-sm btn-gray" onclick="switchTab('fund_pool')">詳細 &#x2192;</button>
+    </div>
+    <div class="card-grid-4">
+        <div class="card">
+            <div class="card-label">初始資金</div>
+            <div class="card-value small" id="fp-initial">$0</div>
+        </div>
+        <div class="card">
+            <div class="card-label">目前總值</div>
+            <div class="card-value small" id="fp-total">$0</div>
+        </div>
+        <div class="card">
+            <div class="card-label">總成長</div>
+            <div class="card-value small" id="fp-growth">$0</div>
+        </div>
+        <div class="card">
+            <div class="card-label">成長率</div>
+            <div class="card-value small" id="fp-rate">0%</div>
+        </div>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:var(--bg-card);border-radius:8px">
+        <canvas id="fp-mini-chart" height="80"></canvas>
+    </div>
+</div>
+
 <div class="action-bar">
     <button class="btn btn-primary" onclick="refreshPrices()">&#x1F504; 重新整理股價</button>
     <button class="btn btn-purple" onclick="importCsv()">&#x1F4E5; 匯入 CSV</button>
@@ -151,5 +179,59 @@
     <div class="section-card-title">股價快取管理</div>
     <p style="font-size:13px;color:var(--gray-500);margin-bottom:8px">快取目錄：data/cache/</p>
     <button class="btn btn-warning" onclick="clearCache()">清除快取</button>
+</div>
+{% endblock %}
+
+{% block fund_pool %}
+<div class="page-title">&#x1F4B0; 資金池管理</div>
+
+<div class="card-grid-4">
+    <div class="card">
+        <div class="card-label">初始資金</div>
+        <div class="card-value" id="fp-initial-full">$0</div>
+    </div>
+    <div class="card">
+        <div class="card-label">淨投入</div>
+        <div class="card-value" id="fp-net-invested">$0</div>
+    </div>
+    <div class="card">
+        <div class="card-label">目前總值</div>
+        <div class="card-value" id="fp-total-full">$0</div>
+    </div>
+    <div class="card">
+        <div class="card-label">成長率</div>
+        <div class="card-value" id="fp-rate-full">0%</div>
+    </div>
+</div>
+
+<div class="action-bar">
+    <button class="btn btn-success" onclick="showInitialDialog()">&#x1F4B5; 設定初始資金</button>
+    <button class="btn btn-success" onclick="showDepositDialog()">&#x1F4B5; 入金</button>
+    <button class="btn btn-warning" onclick="showWithdrawDialog()">&#x1F4B8; 出金</button>
+    <button class="btn btn-primary" onclick="showSnapshotDialog()">&#x1F4CA; 產生報告</button>
+</div>
+
+<div class="section-card">
+    <div class="section-card-title">資金異動記錄</div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>日期</th><th>類型</th><th class="right">金額</th><th>備註</th><th></th></tr>
+            </thead>
+            <tbody id="fp-transactions"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section-card">
+    <div class="section-card-title">定期報告</div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>期間</th><th>日期</th><th class="right">總值</th><th class="right">淨投入</th><th class="right">成長率</th></tr>
+            </thead>
+            <tbody id="fp-snapshots"></tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

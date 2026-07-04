@@ -12,6 +12,9 @@
             <button class="tab-btn active" data-tab="dashboard">
                 <span class="icon">&#x1F4CA;</span>持有總覽
             </button>
+            <button class="tab-btn" data-tab="fund_pool">
+                <span class="icon">&#x1F4B0;</span>資金池
+            </button>
             <button class="tab-btn" data-tab="stock">
                 <span class="icon">&#x1F4CB;</span>個股管理
             </button>
@@ -33,6 +36,7 @@
         </div>
 
         <div id="tab-dashboard" class="tab-content active">{% block dashboard %}{% endblock %}</div>
+        <div id="tab-fund_pool" class="tab-content">{% block fund_pool %}{% endblock %}</div>
         <div id="tab-stock" class="tab-content">{% block stock_detail %}{% endblock %}</div>
         <div id="tab-etf" class="tab-content">{% block etf_detail %}{% endblock %}</div>
         <div id="tab-backtest" class="tab-content">{% block backtest %}{% endblock %}</div>

@@ -8,6 +8,7 @@ function switchTab(tab) {
     document.getElementById('tab-' + tab).classList.add('active');
     localStorage.setItem('activeTab', tab);
     if (tab === 'dashboard') loadDashboard();
+    if (tab === 'fund_pool') loadFundPool();
     if (tab === 'stock') loadStockList();
     if (tab === 'etf') loadEtfList();
     if (tab === 'settings') loadConfig();
@@ -76,6 +77,7 @@ async function loadDashboard() {
     }
 
     renderPieChart(data.stocks);
+    loadFundPool();
 }
 
 function renderPieChart(stocks) {
@@ -421,39 +423,81 @@ async function importCsv() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv';
+    input.multiple = true;
     input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
+        const files = input.files;
+        if (files.length !== 2) {
+            showToast('請同時選擇交易記錄與資金池兩筆檔案', 'error');
+            return;
+        }
+
+        const hasTrades = [...files].some(f => f.name.includes('trades'));
+        const hasFund = [...files].some(f => f.name.includes('fundpool'));
+
+        if (!hasTrades || !hasFund) {
+            showToast('檔名不符，請使用系統匯出的檔案', 'error');
+            return;
+        }
+
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('trades', files.find(f => f.name.includes('trades')));
+        formData.append('fundpool', files.find(f => f.name.includes('fundpool')));
+
         try {
-            const res = await fetch('/api/import/csv', { method: 'POST', body: formData });
+            const res = await fetch('/api/import/all', { method: 'POST', body: formData });
             const data = await res.json();
-            if (res.ok) { showToast(data.message, 'success'); loadDashboard(); }
-            else { showToast(data.error || '匯入失敗', 'error'); }
-        } catch (e) { showToast('匯入失敗: ' + e.message, 'error'); }
+            if (res.ok) {
+                showToast(data.message, 'success');
+                loadDashboard();
+                loadFundPool();
+            } else {
+                showToast(data.error || '匯入失敗', 'error');
+            }
+        } catch (e) {
+            showToast('匯入失敗: ' + e.message, 'error');
+        }
     };
     input.click();
 }
 
 async function exportCsv() {
     try {
-        const res = await fetch('/api/export/csv');
-        if (!res.ok) {
-            const data = await res.json();
+        const tradesRes = await fetch('/api/export/csv');
+        if (!tradesRes.ok) {
+            const data = await tradesRes.json();
             showToast(data.error || '匯出失敗', 'error');
             return;
         }
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = '';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showToast('匯出成功', 'success');
+        const tradesBlob = await tradesRes.blob();
+        const tradesUrl = window.URL.createObjectURL(tradesBlob);
+        const tradesLink = document.createElement('a');
+        tradesLink.href = tradesUrl;
+        const tradesDate = new Date().toISOString().split('T')[0];
+        tradesLink.download = `StockTracker_trades_${tradesDate}.csv`;
+        document.body.appendChild(tradesLink);
+        tradesLink.click();
+        document.body.removeChild(tradesLink);
+        window.URL.revokeObjectURL(tradesUrl);
+
+        setTimeout(async () => {
+            const fundRes = await fetch('/api/fund-pool/export');
+            if (!fundRes.ok) {
+                const data = await fundRes.json();
+                showToast(data.error || '資金池匯出失敗', 'error');
+                return;
+            }
+            const fundBlob = await fundRes.blob();
+            const fundUrl = window.URL.createObjectURL(fundBlob);
+            const fundLink = document.createElement('a');
+            fundLink.href = fundUrl;
+            const fundDate = new Date().toISOString().split('T')[0];
+            fundLink.download = `StockTracker_fundpool_${fundDate}.csv`;
+            document.body.appendChild(fundLink);
+            fundLink.click();
+            document.body.removeChild(fundLink);
+            window.URL.revokeObjectURL(fundUrl);
+            showToast('匯出成功', 'success');
+        }, 500);
     } catch (e) {
         showToast('匯出失敗: ' + e.message, 'error');
     }
@@ -830,6 +874,281 @@ async function loadArchived() {
     }
     html += '</tbody></table></div>';
     el.innerHTML = html;
+}
+
+// ====== Fund Pool ======
+async function loadFundPool() {
+    const data = await api('/api/fund-pool');
+    if (!data) return;
+
+    document.getElementById('fp-initial').textContent = '$' + fmt(data.initial_capital);
+    document.getElementById('fp-total').textContent = '$' + fmt(data.total_value);
+
+    const growthEl = document.getElementById('fp-growth');
+    growthEl.textContent = '$' + fmtPL(data.growth_amount);
+    growthEl.className = 'card-value small ' + getGrowthColor(data.growth_rate);
+
+    const rateEl = document.getElementById('fp-rate');
+    rateEl.textContent = fmtPL(data.growth_rate) + '%';
+    rateEl.className = 'card-value small ' + getGrowthColor(data.growth_rate);
+
+    if (document.getElementById('fp-initial-full')) {
+        document.getElementById('fp-initial-full').textContent = '$' + fmt(data.initial_capital);
+        document.getElementById('fp-net-invested').textContent = '$' + fmt(data.net_invested);
+        document.getElementById('fp-total-full').textContent = '$' + fmt(data.total_value);
+
+        const rateFullEl = document.getElementById('fp-rate-full');
+        rateFullEl.textContent = fmtPL(data.growth_rate) + '%';
+        rateFullEl.className = 'card-value ' + getGrowthColor(data.growth_rate);
+    }
+
+    renderFundTransactions(data.transactions);
+    renderFundSnapshots(data.snapshots);
+    renderFundMiniChart(data.snapshots);
+}
+
+function getGrowthColor(rate) {
+    return rate >= 0 ? 'positive' : 'negative';
+}
+
+function renderFundTransactions(transactions) {
+    const tbody = document.getElementById('fp-transactions');
+    if (!tbody) return;
+
+    if (!transactions || transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">尚無記錄</td></tr>';
+        return;
+    }
+
+    const typeMap = { deposit: '入金', withdraw: '出金', initial: '初始資金' };
+
+    tbody.innerHTML = transactions.map(t => `
+        <tr>
+            <td>${t.date}</td>
+            <td><span class="badge ${t.type === 'deposit' ? 'badge-buy' : 'badge-sell'}">${typeMap[t.type] || t.type}</span></td>
+            <td class="right">$${fmt(t.amount)}</td>
+            <td style="font-size:12px;color:var(--gray-500)">${t.remark || ''}</td>
+            <td></td>
+        </tr>
+    `).join('');
+}
+
+function renderFundSnapshots(snapshots) {
+    const tbody = document.getElementById('fp-snapshots');
+    if (!tbody) return;
+
+    if (!snapshots || snapshots.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">尚無報告</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = snapshots.map(s => `
+        <tr>
+            <td>${s.period_label}</td>
+            <td>${s.date}</td>
+            <td class="right">$${fmt(s.total_value)}</td>
+            <td class="right">$${fmt(s.total_deposits)}</td>
+            <td class="right ${getGrowthColor(s.growth_rate)}">${fmtPL(s.growth_rate)}%</td>
+        </tr>
+    `).join('');
+}
+
+function renderFundMiniChart(snapshots) {
+    const canvas = document.getElementById('fp-mini-chart');
+    if (!canvas || !snapshots || snapshots.length === 0) return;
+
+    if (typeof Chart === 'undefined') return;
+
+    const ctx = canvas.getContext('2d');
+    if (window._fpMiniChart) window._fpMiniChart.destroy();
+
+    const labels = snapshots.map(s => s.period_label || s.date);
+    const data = snapshots.map(s => s.growth_rate);
+
+    window._fpMiniChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '成長率 %',
+                data: data,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.parsed.y.toFixed(2) + '%'
+                    }
+                }
+            },
+            scales: {
+                x: { display: true, ticks: { font: { size: 10 } } },
+                y: {
+                    display: true,
+                    ticks: {
+                        callback: v => v.toFixed(1) + '%',
+                        font: { size: 10 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function showInitialDialog() {
+    showModal(`
+        <h3>&#x1F4B5; 設定初始資金</h3>
+        <div class="form-grid">
+            <div class="form-label">初始金額</div><input class="form-input" id="fp-amount" type="number" step="0.01">
+        </div>
+        <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="submitInitial()">確定</button>
+            <button class="btn btn-gray" onclick="hideModal()">取消</button>
+        </div>
+    `);
+}
+
+async function submitInitial() {
+    const amount = parseFloat(document.getElementById('fp-amount').value);
+
+    if (!amount || amount <= 0) {
+        showToast('請輸入有效金額', 'error');
+        return;
+    }
+
+    const result = await api('/api/fund-pool/initial', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+    });
+
+    if (result) {
+        hideModal();
+        showToast(result.message, 'success');
+        loadFundPool();
+        loadDashboard();
+    }
+}
+
+function showDepositDialog() {
+    showModal(`
+        <h3>&#x1F4B5; 入金</h3>
+        <div class="form-grid">
+            <div class="form-label">日期</div><input class="form-input" id="fp-date" type="date" value="${today()}">
+            <div class="form-label">金額</div><input class="form-input" id="fp-amount" type="number" step="0.01">
+            <div class="form-label">備註</div><input class="form-input" id="fp-remark" type="text">
+        </div>
+        <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="submitDeposit()">確定</button>
+            <button class="btn btn-gray" onclick="hideModal()">取消</button>
+        </div>
+    `);
+}
+
+async function submitDeposit() {
+    const date = document.getElementById('fp-date').value;
+    const amount = parseFloat(document.getElementById('fp-amount').value);
+    const remark = document.getElementById('fp-remark').value;
+
+    if (!amount || amount <= 0) {
+        showToast('請輸入有效金額', 'error');
+        return;
+    }
+
+    const result = await api('/api/fund-pool/deposit', {
+        method: 'POST',
+        body: JSON.stringify({ date, amount, remark })
+    });
+
+    if (result) {
+        hideModal();
+        showToast(result.message, 'success');
+        loadFundPool();
+        loadDashboard();
+    }
+}
+
+function showWithdrawDialog() {
+    showModal(`
+        <h3>&#x1F4B8; 出金</h3>
+        <div class="form-grid">
+            <div class="form-label">日期</div><input class="form-input" id="fp-date" type="date" value="${today()}">
+            <div class="form-label">金額</div><input class="form-input" id="fp-amount" type="number" step="0.01">
+            <div class="form-label">備註</div><input class="form-input" id="fp-remark" type="text">
+        </div>
+        <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="submitWithdraw()">確定</button>
+            <button class="btn btn-gray" onclick="hideModal()">取消</button>
+        </div>
+    `);
+}
+
+async function submitWithdraw() {
+    const date = document.getElementById('fp-date').value;
+    const amount = parseFloat(document.getElementById('fp-amount').value);
+    const remark = document.getElementById('fp-remark').value;
+
+    if (!amount || amount <= 0) {
+        showToast('請輸入有效金額', 'error');
+        return;
+    }
+
+    const result = await api('/api/fund-pool/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({ date, amount, remark })
+    });
+
+    if (result) {
+        hideModal();
+        showToast(result.message, 'success');
+        loadFundPool();
+        loadDashboard();
+    }
+}
+
+function showSnapshotDialog() {
+    showModal(`
+        <h3>&#x1F4CA; 產生定期報告</h3>
+        <div class="form-grid">
+            <div class="form-label">期間標籤</div>
+            <select class="form-input" id="fp-period">
+                <option value="2026-Q1">2026-Q1</option>
+                <option value="2026-Q2">2026-Q2</option>
+                <option value="2026-Q3">2026-Q3</option>
+                <option value="2026-Q4">2026-Q4</option>
+                <option value="2026-H1">2026-H1</option>
+                <option value="2026-H2">2026-H2</option>
+                <option value="2026-年度">2026-年度</option>
+            </select>
+        </div>
+        <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="submitSnapshot()">產生</button>
+            <button class="btn btn-gray" onclick="hideModal()">取消</button>
+        </div>
+    `);
+}
+
+async function submitSnapshot() {
+    const period_label = document.getElementById('fp-period').value;
+
+    const result = await api('/api/fund-pool/snapshot', {
+        method: 'POST',
+        body: JSON.stringify({ period_label })
+    });
+
+    if (result) {
+        hideModal();
+        showToast(result.message, 'success');
+        loadFundPool();
+    }
 }
 
 // ====== Init ======
