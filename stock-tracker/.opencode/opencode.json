@@ -1,0 +1,9 @@
+{
+  "instructions": ["AGENTS.md"],
+  "python": {
+    "venv": "venv",
+    "activate": ".\\venv\\Scripts\\Activate.ps1",
+    "test": "pytest",
+    "lint": "ruff check ."
+  }
+}
