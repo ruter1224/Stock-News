@@ -2,9 +2,12 @@ package com.stocktracker.app
 
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +23,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadingBar: ProgressBar
     private lateinit var loadingLayout: View
     private lateinit var statusText: TextView
+    private lateinit var retryButton: Button
+    private lateinit var errorLayout: View
     private var flaskStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +35,15 @@ class MainActivity : AppCompatActivity() {
         loadingBar = findViewById(R.id.loadingBar)
         loadingLayout = findViewById(R.id.loadingLayout)
         statusText = findViewById(R.id.statusText)
+        retryButton = findViewById(R.id.retryButton)
+        errorLayout = findViewById(R.id.errorLayout)
+
+        retryButton.setOnClickListener {
+            errorLayout.visibility = View.GONE
+            loadingLayout.visibility = View.VISIBLE
+            statusText.text = "正在重新載入..."
+            webView.loadUrl("http://127.0.0.1:5000")
+        }
 
         setupWebView()
         startFlaskServer()
@@ -50,6 +64,32 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 loadingLayout.visibility = View.GONE
+                errorLayout.visibility = View.GONE
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                if (request?.isForMainFrame == true) {
+                    loadingLayout.visibility = View.GONE
+                    errorLayout.visibility = View.VISIBLE
+                    statusText.text = "無法載入頁面\n請確認伺服器是否正常運行"
+                }
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                errorCode: Int,
+                description: String?,
+                failingUrl: String?
+            ) {
+                if (failingUrl == view?.url) {
+                    loadingLayout.visibility = View.GONE
+                    errorLayout.visibility = View.VISIBLE
+                    statusText.text = "無法載入頁面\n請確認伺服器是否正常運行"
+                }
             }
         }
     }
