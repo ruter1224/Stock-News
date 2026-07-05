@@ -8,6 +8,7 @@ import os
 import sys
 import threading
 import time
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -33,27 +34,51 @@ def get_resource_path(relative_path):
 
 
 def start_flask_server(port=5000):
-    """啟動 Flask server"""
-    data_dir = get_data_dir()
-    os.environ["STOCK_TRACKER_DATA_DIR"] = data_dir
+    """啟動 Flask server（主執行緒阻塞運行）"""
+    try:
+        data_dir = get_data_dir()
+        os.environ["STOCK_TRACKER_DATA_DIR"] = data_dir
 
-    template_dir = get_resource_path("web/templates")
-    static_dir = get_resource_path("web/static")
+        from web.app import create_app
+        app = create_app()
 
-    sys.path.insert(0, get_resource_path("."))
+        print(f"\n  伺服器已啟動：http://127.0.0.1:{port}")
+        print("  關閉此視窗即可停止伺服器\n")
 
-    from web.app import create_app
-    app = create_app()
-    app.template_folder = template_dir
-    app.static_folder = static_dir
+        app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    except OSError as e:
+        if "address already in use" in str(e).lower() or "10048" in str(e):
+            print(f"\n  啟動失敗：Port {port} 已被其他程式使用")
+            print(f"  請關閉其他 Stock Tracker 視窗，或修改程式更換 port")
+        else:
+            print(f"\n  伺服器啟動失敗：{e}")
+        input("\n  按 Enter 關閉...")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n  伺服器啟動失敗：{e}")
+        input("\n  按 Enter 關閉...")
+        sys.exit(1)
 
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+
+def wait_for_server(port=5000, timeout=15):
+    """等待伺服器就緒"""
+    url = f"http://127.0.0.1:{port}"
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            resp = urllib.request.urlopen(url, timeout=2)
+            if resp.status == 200:
+                return True
+        except Exception:
+            pass
+        time.sleep(0.3)
+    return False
 
 
-def open_browser(port=5000, delay=1.5):
-    """延遲後開啟瀏覽器"""
-    time.sleep(delay)
-    webbrowser.open(f"http://127.0.0.1:{port}")
+def open_browser(port=5000):
+    """確認伺服器就緒後開啟瀏覽器，然後結束執行緒"""
+    if wait_for_server(port):
+        webbrowser.open(f"http://127.0.0.1:{port}")
 
 
 def main():
@@ -65,12 +90,13 @@ def main():
     print(f"\n  資料目錄: {get_data_dir()}")
     print(f"  正在啟動伺服器 (port {port})...")
     print(f"  瀏覽器將自動開啟 http://127.0.0.1:{port}")
-    print("\n  關閉此視窗即可停止伺服器")
     print("-" * 50)
 
+    # 瀏覽器在 daemon 執行緒：確認就緒 → 開啟 → 結束
     browser_thread = threading.Thread(target=open_browser, args=(port,), daemon=True)
     browser_thread.start()
 
+    # Flask 在主執行緒阻塞運行，CMD 視窗持續存在
     start_flask_server(port)
 
 
