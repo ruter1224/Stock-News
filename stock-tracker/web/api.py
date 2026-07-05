@@ -11,7 +11,7 @@ from core.models import Transaction
 from core.history import init_history_dir, download_history, update_history, list_history_codes, history_exists
 from core.backtest import single_stock_backtest, portfolio_backtest
 from core.news import init_cache as init_news_cache, get_news_page, refresh_news
-from core.fund_pool import FundTransaction, FundSnapshot
+from core.fund_pool import FundSnapshot, calculate_cash_balance
 
 _data_dir_env = os.environ.get("STOCK_TRACKER_DATA_DIR")
 if _data_dir_env:
@@ -87,6 +87,16 @@ def get_portfolio():
     total_pl = total_value - total_cost
     roi = (total_pl / total_cost * 100) if total_cost > 0 else 0.0
     zc_count = sum(1 for s in stocks if s["is_zero_cost"])
+
+    cash_balance = calculate_cash_balance(portfolio)
+    investment_total = cash_balance + total_value
+    initial_capital = 0.0
+    for state in portfolio.stocks.values():
+        for tx in state.history:
+            if tx.action == "init":
+                initial_capital += tx.total_amount
+    growth_rate = ((investment_total / initial_capital - 1) * 100) if initial_capital > 0 else 0.0
+
     return jsonify({
         "stocks": stocks,
         "count": len(stocks),
@@ -95,6 +105,9 @@ def get_portfolio():
         "total_pl": round(total_pl, 2),
         "total_roi": round(roi, 2),
         "zc_count": zc_count,
+        "cash_balance": round(cash_balance, 2),
+        "investment_total": round(investment_total, 2),
+        "growth_rate": round(growth_rate, 2),
     })
 
 
@@ -310,10 +323,31 @@ def import_csv():
         csv_path = str(DATA_DIR / "_upload_temp.csv")
         file.save(csv_path)
         global portfolio
-        portfolio, n = parse_trades_csv(csv_path, portfolio, cfg)
+        portfolio, n, snapshot_rows = parse_trades_csv(csv_path, portfolio, cfg)
         Path(csv_path).unlink(missing_ok=True)
         _save()
-        return jsonify({"message": f"已匯入 {n} 筆交易"})
+
+        msg = f"已匯入 {n} 筆交易"
+
+        # 處理快照區塊
+        if snapshot_rows:
+            fund_pool = load_fund_pool(FUND_POOL_FILE)
+            for row in snapshot_rows:
+                try:
+                    snapshot = FundSnapshot(
+                        date=row[0],
+                        total_value=float(row[1]),
+                        growth_rate=float(row[2]),
+                        cash_balance=float(row[3]) if len(row) > 3 else 0.0,
+                        market_value=float(row[4]) if len(row) > 4 else 0.0,
+                    )
+                    fund_pool.snapshots.append(snapshot)
+                except (ValueError, IndexError):
+                    continue
+            save_fund_pool(fund_pool, FUND_POOL_FILE)
+            msg += f" + {len(snapshot_rows)} 筆快照"
+
+        return jsonify({"message": msg})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -330,7 +364,6 @@ def export_csv():
         w = csv_module.writer(output)
         w.writerow(["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅", "成交金額", "狀態", "備註"])
 
-        count = 0
         for code in sorted(portfolio.stock_codes):
             st = portfolio.get_state(code)
             for tx in st.history:
@@ -344,7 +377,13 @@ def export_csv():
                     tx.price, tx.shares, tx.fee, tx.tax, tx.total_amount,
                     status, tx.remark,
                 ])
-                count += 1
+
+        # 強制包含資金池快照區塊
+        fund_pool = load_fund_pool(FUND_POOL_FILE)
+        w.writerow(["---", "資金池快照", "---", "---", "---", "---", "---", "---", "---", "---"])
+        w.writerow(["日期", "總值", "成長率%", "可用現金", "持有市值"])
+        for s in fund_pool.snapshots:
+            w.writerow([s.date, s.total_value, s.growth_rate, s.cash_balance, s.market_value])
 
         csv_content = output.getvalue()
         today = datetime.now().strftime("%Y-%m-%d")
@@ -466,147 +505,65 @@ def backtest_portfolio():
 
 # ====== Fund Pool ======
 
-def _save_fund_pool():
-    fund_pool = load_fund_pool(FUND_POOL_FILE)
-    save_fund_pool(fund_pool, FUND_POOL_FILE)
+def _fund_pool_calc():
+    """計算資金池核心數據"""
+    cash_balance = calculate_cash_balance(portfolio)
+
+    portfolio_value = 0.0
+    for code in portfolio.stock_codes:
+        price, _ = _get_cached_price(code)
+        if price:
+            state = portfolio.get_state(code)
+            portfolio_value += price * state.shares
+
+    total_value = cash_balance + portfolio_value
+    initial_capital = 0.0
+    for state in portfolio.stocks.values():
+        for tx in state.history:
+            if tx.action == "init":
+                initial_capital += tx.total_amount
+
+    growth_amount = total_value - initial_capital
+    growth_rate = (growth_amount / initial_capital * 100) if initial_capital > 0 else 0.0
+
+    return {
+        "initial_capital": round(initial_capital, 2),
+        "cash_balance": round(cash_balance, 2),
+        "portfolio_value": round(portfolio_value, 2),
+        "total_value": round(total_value, 2),
+        "growth_amount": round(growth_amount, 2),
+        "growth_rate": round(growth_rate, 2),
+    }
 
 
 @api.route("/fund-pool")
 def get_fund_pool():
     fund_pool = load_fund_pool(FUND_POOL_FILE)
-
-    cash_balance = fund_pool.calculate_cash_balance(portfolio)
-
-    portfolio_value = 0.0
-    for code in portfolio.stock_codes:
-        price, _ = _get_cached_price(code)
-        if price:
-            state = portfolio.get_state(code)
-            portfolio_value += price * state.shares
-
-    total_value = cash_balance + portfolio_value
-    net_invested = (
-        fund_pool.initial_capital
-        + sum(t.amount for t in fund_pool.transactions if t.type == "deposit")
-        - sum(t.amount for t in fund_pool.transactions if t.type == "withdraw")
-    )
-
-    growth_amount = total_value - net_invested
-    growth_rate = (growth_amount / net_invested * 100) if net_invested > 0 else 0.0
-
+    calc = _fund_pool_calc()
     return jsonify({
-        "initial_capital": fund_pool.initial_capital,
-        "cash_balance": round(cash_balance, 2),
-        "portfolio_value": round(portfolio_value, 2),
-        "total_value": round(total_value, 2),
-        "net_invested": round(net_invested, 2),
-        "growth_amount": round(growth_amount, 2),
-        "growth_rate": round(growth_rate, 2),
-        "transactions": [
-            {"date": t.date, "type": t.type, "amount": t.amount, "remark": t.remark}
-            for t in fund_pool.transactions
-        ],
-        "snapshots": [
-            {
-                "date": s.date,
-                "total_value": s.total_value,
-                "total_deposits": s.total_deposits,
-                "growth_rate": s.growth_rate,
-                "cash_balance": s.cash_balance,
-                "period_label": s.period_label,
-            }
-            for s in fund_pool.snapshots
-        ],
+        **calc,
+        "snapshots": [s.to_dict() for s in fund_pool.snapshots],
     })
-
-
-@api.route("/fund-pool/initial", methods=["POST"])
-def set_fund_pool_initial():
-    data = request.get_json()
-    try:
-        amount = float(data["amount"])
-    except (KeyError, ValueError, TypeError):
-        return jsonify({"error": "請輸入有效金額"}), 400
-
-    fund_pool = load_fund_pool(FUND_POOL_FILE)
-    fund_pool.initial_capital = amount
-    save_fund_pool(fund_pool, FUND_POOL_FILE)
-    return jsonify({"message": f"已設定初始資金 ${amount:,.0f}"})
-
-
-@api.route("/fund-pool/deposit", methods=["POST"])
-def fund_pool_deposit():
-    data = request.get_json()
-    try:
-        amount = float(data["amount"])
-        date_str = data.get("date", "")
-        remark = data.get("remark", "")
-    except (KeyError, ValueError, TypeError):
-        return jsonify({"error": "請輸入有效金額"}), 400
-
-    fund_pool = load_fund_pool(FUND_POOL_FILE)
-    tx = FundTransaction(date=date_str, type="deposit", amount=amount, remark=remark)
-    fund_pool.transactions.append(tx)
-    save_fund_pool(fund_pool, FUND_POOL_FILE)
-    return jsonify({"message": f"已入金 ${amount:,.0f}"})
-
-
-@api.route("/fund-pool/withdraw", methods=["POST"])
-def fund_pool_withdraw():
-    data = request.get_json()
-    try:
-        amount = float(data["amount"])
-        date_str = data.get("date", "")
-        remark = data.get("remark", "")
-    except (KeyError, ValueError, TypeError):
-        return jsonify({"error": "請輸入有效金額"}), 400
-
-    fund_pool = load_fund_pool(FUND_POOL_FILE)
-    tx = FundTransaction(date=date_str, type="withdraw", amount=amount, remark=remark)
-    fund_pool.transactions.append(tx)
-    save_fund_pool(fund_pool, FUND_POOL_FILE)
-    return jsonify({"message": f"已出金 ${amount:,.0f}"})
 
 
 @api.route("/fund-pool/snapshot", methods=["POST"])
 def fund_pool_snapshot():
-    data = request.get_json()
-    period_label = data.get("period_label", "")
-
     fund_pool = load_fund_pool(FUND_POOL_FILE)
-
-    cash_balance = fund_pool.calculate_cash_balance(portfolio)
-
-    portfolio_value = 0.0
-    for code in portfolio.stock_codes:
-        price, _ = _get_cached_price(code)
-        if price:
-            state = portfolio.get_state(code)
-            portfolio_value += price * state.shares
-
-    total_value = cash_balance + portfolio_value
-    net_invested = (
-        fund_pool.initial_capital
-        + sum(t.amount for t in fund_pool.transactions if t.type == "deposit")
-        - sum(t.amount for t in fund_pool.transactions if t.type == "withdraw")
-    )
-
-    growth_rate = ((total_value / net_invested - 1) * 100) if net_invested > 0 else 0.0
+    calc = _fund_pool_calc()
 
     from datetime import datetime
     snapshot = FundSnapshot(
         date=datetime.now().strftime("%Y-%m-%d"),
-        total_value=round(total_value, 2),
-        total_deposits=round(net_invested, 2),
-        growth_rate=round(growth_rate, 2),
-        cash_balance=round(cash_balance, 2),
-        period_label=period_label,
+        total_value=calc["total_value"],
+        growth_rate=calc["growth_rate"],
+        cash_balance=calc["cash_balance"],
+        market_value=calc["portfolio_value"],
     )
     fund_pool.snapshots.append(snapshot)
     save_fund_pool(fund_pool, FUND_POOL_FILE)
 
     return jsonify({
-        "message": f"已產生報告: {period_label}",
+        "message": "已產生報告",
         "snapshot": snapshot.to_dict(),
     })
 
@@ -622,20 +579,10 @@ def export_fund_pool():
 
     output = io.StringIO()
     w = csv_module.writer(output)
-    w.writerow(["日期", "類型", "金額", "備註"])
-
-    type_map = {"deposit": "入金", "withdraw": "出金", "initial": "初始資金"}
-
-    if fund_pool.initial_capital > 0:
-        w.writerow(["", "初始資金", fund_pool.initial_capital, ""])
-
-    for t in fund_pool.transactions:
-        w.writerow([t.date, type_map.get(t.type, t.type), t.amount, t.remark])
-
-    w.writerow(["---", "定期報告", "---", "---"])
+    w.writerow(["日期", "總值", "成長率%", "可用現金", "持有市值"])
 
     for s in fund_pool.snapshots:
-        w.writerow([s.date, f"報告-{s.period_label}", s.total_value, f"成長率:{s.growth_rate:.2f}%"])
+        w.writerow([s.date, s.total_value, s.growth_rate, s.cash_balance, s.market_value])
 
     csv_content = output.getvalue()
     today = datetime.now().strftime("%Y-%m-%d")
@@ -647,68 +594,53 @@ def export_fund_pool():
     return response
 
 
-@api.route("/import/all", methods=["POST"])
-def import_all():
-    if "trades" not in request.files or "fundpool" not in request.files:
-        return jsonify({"error": "缺少檔案，請同時提供交易記錄與資金池"}), 400
-
-    trades_file = request.files["trades"]
-    fund_file = request.files["fundpool"]
-
-    if not trades_file.filename.endswith(".csv") or not fund_file.filename.endswith(".csv"):
-        return jsonify({"error": "僅支援 CSV 格式"}), 400
-
-    try:
-        global portfolio
-        trades_path = str(DATA_DIR / "_upload_trades_temp.csv")
-        trades_file.save(trades_path)
-        portfolio, n_trades = parse_trades_csv(trades_path, portfolio, cfg)
-        Path(trades_path).unlink(missing_ok=True)
-
-        fund_path = str(DATA_DIR / "_upload_fund_temp.csv")
-        fund_file.save(fund_path)
-        fund_pool = load_fund_pool(FUND_POOL_FILE)
-        fund_pool = _parse_fund_pool_csv(fund_path, fund_pool)
-        save_fund_pool(fund_pool, FUND_POOL_FILE)
-        Path(fund_path).unlink(missing_ok=True)
-
-        _save()
-        return jsonify({
-            "message": f"已匯入 {n_trades} 筆交易 + 資金池記錄",
-            "trades_count": n_trades,
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 def _parse_fund_pool_csv(csv_path, fund_pool):
     import csv
 
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.reader(f)
         header = next(reader, None)
+        if header is None:
+            return fund_pool
 
-        for row in reader:
-            if len(row) < 3:
-                continue
-            date_str, type_str, amount_str = row[0], row[1], row[2]
-            remark = row[3] if len(row) > 3 else ""
+        # 偵測格式：新格式 or 舊格式
+        is_new_format = header[0] == "日期" and len(header) >= 5 and "總值" in header[1]
 
-            if date_str.startswith("---"):
-                continue
-
-            try:
-                amount = float(amount_str)
-            except ValueError:
-                continue
-
-            type_map = {"入金": "deposit", "出金": "withdraw", "初始資金": "initial"}
-            tx_type = type_map.get(type_str, type_str)
-
-            if tx_type == "initial":
-                fund_pool.initial_capital = amount
-            else:
-                tx = FundTransaction(date=date_str, type=tx_type, amount=amount, remark=remark)
-                fund_pool.transactions.append(tx)
+        if is_new_format:
+            for row in reader:
+                if len(row) < 3:
+                    continue
+                try:
+                    snapshot = FundSnapshot(
+                        date=row[0],
+                        total_value=float(row[1]),
+                        growth_rate=float(row[2]),
+                        cash_balance=float(row[3]) if len(row) > 3 else 0.0,
+                        market_value=float(row[4]) if len(row) > 4 else 0.0,
+                    )
+                    fund_pool.snapshots.append(snapshot)
+                except (ValueError, IndexError):
+                    continue
+        else:
+            # 舊格式寬鬆解析
+            for row in reader:
+                if len(row) < 3:
+                    continue
+                date_str, type_str = row[0], row[1]
+                if date_str.startswith("---"):
+                    continue
+                if type_str.startswith("報告-"):
+                    try:
+                        total_value = float(row[2])
+                        growth_str = row[3] if len(row) > 3 else "0"
+                        growth_rate = float(growth_str.replace("成長率:", "").replace("%", ""))
+                        snapshot = FundSnapshot(
+                            date=date_str,
+                            total_value=total_value,
+                            growth_rate=growth_rate,
+                        )
+                        fund_pool.snapshots.append(snapshot)
+                    except (ValueError, IndexError):
+                        continue
 
     return fund_pool

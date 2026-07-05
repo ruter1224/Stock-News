@@ -19,7 +19,7 @@ class TestParseTrades:
             ["2024-06-01", "2330", "賣出", 150, 500, 0, 225],
         ], header=["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 2
         st = portfolio.get_state("2330")
         assert st.shares == 500
@@ -30,7 +30,7 @@ class TestParseTrades:
             ["2024-01-01", "買進", 100, 1000],
         ], header=["日期", "買賣別", "價格", "股數"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 1
         st = portfolio.get_state("0000")
         assert st.shares == 1000
@@ -40,7 +40,7 @@ class TestParseTrades:
             ["2024-01-01", "2330", "buy", 100, 1000],
         ], header=["date", "stock", "action", "price", "shares"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 1
         assert portfolio.get_state("2330").shares == 1000
 
@@ -49,7 +49,7 @@ class TestParseTrades:
             ["113/01/01", "2330", "B", 100, 1000],
         ], header=["日期", "股票代號", "買賣別", "價格", "股數"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 1
         tx = portfolio.get_state("2330").history[0]
         assert tx.date == "2024-01-01"
@@ -65,7 +65,7 @@ class TestParseTrades:
         tx = make_buy("2024-01-01", 100, 1000)
         portfolio.add_transaction("2330", tx, cfg)
 
-        portfolio, n = parse_trades_csv(csv, portfolio, cfg)
+        portfolio, n, _ = parse_trades_csv(csv, portfolio, cfg)
         assert n == 1
         st = portfolio.get_state("2330")
         assert st.shares == 1500
@@ -78,7 +78,7 @@ class TestParseTrades:
             ["2024-06-01", "2330", "賣出", 250, 500],
         ], header=["日期", "股票代號", "買賣別", "價格", "股數"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 3
         assert sorted(portfolio.stock_codes) == ["2317", "2330"]
         assert portfolio.get_state("2330").shares == 500
@@ -103,13 +103,13 @@ class TestParseTrades:
             ["2024-01-01", "2330", "買進", 100, 1000, 142.5, 0],
         ], header=["日期", "股票代號", "買賣別", "價格", "股數", "手續費", "交易稅"])
 
-        portfolio, n = parse_trades_csv(src)
+        portfolio, n, _ = parse_trades_csv(src)
         assert n == 1
 
         out = tmp_path / "out.csv"
         export_trades_csv(portfolio, out)
 
-        portfolio2, n2 = parse_trades_csv(out)
+        portfolio2, n2, _ = parse_trades_csv(out)
         assert n2 == 1
         st = portfolio2.get_state("2330")
         assert st.shares == 1000
@@ -121,7 +121,7 @@ class TestParseTrades:
             ["2024-06-01", "2330", "賣出", 150, 500],
         ], header=["日期", "股票代號", "買賣別", "價格", "股數"])
 
-        portfolio, n = parse_trades_csv(csv)
+        portfolio, n, _ = parse_trades_csv(csv)
         assert n == 2
         assert portfolio.get_state("2330").shares == 500
 

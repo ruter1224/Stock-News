@@ -84,7 +84,7 @@ class App(tk.Tk):
             return
         try:
             from data.importer import parse_trades_csv
-            self.portfolio, n = parse_trades_csv(f, self.portfolio, self.cfg)
+            self.portfolio, n, _ = parse_trades_csv(f, self.portfolio, self.cfg)
             self.save()
             messagebox.showinfo("完成", f"已匯入 {n} 筆交易")
             self.refresh_all()

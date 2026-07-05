@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from core.models import StockState
 from core.portfolio import Portfolio
-from core.fund_pool import FundPool
 
 
 def save_portfolio(portfolio, path):
@@ -47,10 +46,12 @@ def save_fund_pool(fund_pool, path):
 
 
 def load_fund_pool(path):
+    from core.fund_pool import FundPool
     p = Path(path)
     if not p.exists():
         return FundPool()
     data = json.loads(p.read_text(encoding="utf-8"))
     if not data:
         return FundPool()
+    # 向後相容：忽略舊格式的 initial_capital 和 transactions
     return FundPool.from_dict(data)

@@ -131,7 +131,7 @@ def cmd_import(args):
     filepath = args.filepath or str(DATA_DIR / "state.json")
     portfolio = load_portfolio(filepath)
     cfg = _load_config(args)
-    portfolio, n = parse_trades_csv(args.csv, portfolio, cfg)
+    portfolio, n, _ = parse_trades_csv(args.csv, portfolio, cfg)
     save_portfolio(portfolio, filepath)
     print(f"已匯入 {n} 筆交易 -> {filepath}")
     for code in sorted(portfolio.stock_codes):

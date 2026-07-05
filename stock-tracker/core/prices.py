@@ -80,7 +80,7 @@ def _resolve_name(stock_code):
         with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         title = data.get("title", "")
-        m = re.match(r"\d+年\d+月\s+\d+\s+(.+)", title)
+        m = re.match(r"\d+年\d+月\s+\S+\s+(.+?)各日成交資訊", title)
         if m:
             return m.group(1).strip()
     except Exception:

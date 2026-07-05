@@ -64,6 +64,9 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
         config = Config()
 
     rows = []
+    snapshot_rows = []
+    in_snapshot_section = False
+
     with open(p, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
         header = [h.strip() for h in next(reader)]
@@ -85,6 +88,18 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
 
         for line_no, row in enumerate(reader, 2):
             if not any(cell.strip() for cell in row):
+                continue
+
+            # 偵測快照區塊分隔線
+            if row[0].strip().startswith("---"):
+                in_snapshot_section = True
+                continue
+
+            if in_snapshot_section:
+                # 跳過快照 header 行
+                if row[0].strip() == "日期":
+                    continue
+                snapshot_rows.append(row)
                 continue
 
             def _g(field):
@@ -125,7 +140,7 @@ def parse_trades_csv(filepath, portfolio=None, config=None):
         portfolio.add_transaction(stock_code, tx, config)
         applied += 1
 
-    return portfolio, applied
+    return portfolio, applied, snapshot_rows
 
 
 def export_trades_csv(portfolio, filepath):
