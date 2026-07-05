@@ -82,3 +82,14 @@ def make_stock_dividend(date: str, per_thousand: int, additional: int):
         additional_shares=additional,
     )
     return tx
+
+
+def make_cash_dividend(date: str, per_share: float, shares: int):
+    return Transaction(
+        date=date,
+        action="dividend",
+        price=0,
+        shares=0,
+        dividend_per_share=per_share,
+        dividend_total=round(per_share * shares, 2),
+    )

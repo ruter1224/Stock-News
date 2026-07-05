@@ -1,7 +1,7 @@
 import pytest
-from core.calculator import dividend_reinvest
+from core.calculator import dividend, dividend_reinvest
 from tests.fixtures import (
-    make_buy, make_dividend_reinvest, make_state, make_config,
+    make_cash_dividend, make_dividend_reinvest, make_state, make_config,
 )
 
 
@@ -12,6 +12,10 @@ class TestDividendReinvest:
 
         total_dividend = 1000 * 5.5
         shares_bought = int(total_dividend / 150)
+        
+        div_tx = make_cash_dividend("2024-06-15", 5.5, 1000)
+        state = dividend(state, div_tx, cfg)
+        
         tx = make_dividend_reinvest(
             date="2024-07-01",
             price=150,
@@ -22,7 +26,7 @@ class TestDividendReinvest:
         new_state = dividend_reinvest(state, tx, cfg)
 
         expected_total_amount = round(150 * shares_bought, 2)
-        expected_cost = 100000 + expected_total_amount
+        expected_cost = 100000 - expected_total_amount
         expected_shares = 1000 + shares_bought
 
         assert new_state.shares == expected_shares
@@ -40,6 +44,10 @@ class TestDividendReinvest:
         shares_bought = int(total_dividend / price)
         total_amount = round(price * shares_bought, 2)
         fee = round(total_amount * 0.001425, 2)
+        
+        div_tx = make_cash_dividend("2024-07-15", 3.0, 2000)
+        state = dividend(state, div_tx, cfg)
+        
         tx = make_dividend_reinvest(
             date="2024-08-01",
             price=price,
@@ -50,7 +58,7 @@ class TestDividendReinvest:
         )
         new_state = dividend_reinvest(state, tx, cfg)
 
-        expected_cost = 300000 + total_amount + fee
+        expected_cost = 300000 - total_dividend
         expected_shares = 2000 + shares_bought
 
         assert new_state.shares == expected_shares
