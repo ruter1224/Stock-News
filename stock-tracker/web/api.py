@@ -30,6 +30,7 @@ if not Path(STATE_FILE).exists():
 portfolio = load_portfolio(STATE_FILE)
 cfg = Config()
 init_history_dir(str(DATA_DIR))
+init_price_cache(str(DATA_DIR))
 init_news_cache(str(DATA_DIR))
 
 api = Blueprint("api", __name__, url_prefix="/api")

@@ -25,6 +25,15 @@ def load_portfolio(path):
         state = StockState.from_dict(data)
         return Portfolio(stocks={"0000": state})
     portfolio = Portfolio.from_dict(data)
+    # 自動遷移：清理孤兒記錄（shares=0 且 history=[]）
+    cleaned = False
+    for code in list(portfolio.stocks.keys()):
+        state = portfolio.stocks[code]
+        if state.shares == 0 and not state.history:
+            del portfolio.stocks[code]
+            cleaned = True
+    if cleaned:
+        save_portfolio(portfolio, path)
     # 自動遷移：將 shares == 0 的股票標記為已封存
     migrated = False
     for code, state in portfolio.stocks.items():

@@ -86,16 +86,14 @@ def _resolve_name(stock_code):
     except Exception:
         pass
     try:
-        ctx_noverify = ssl.create_default_context()
-        ctx_noverify.check_hostname = False
-        ctx_noverify.verify_mode = ssl.CERT_NONE
-        url = f"https://goodinfo.tw/tw/ShowK_Chart.asp?STOCK_ID={stock_code}"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10, context=ctx_noverify) as resp:
-            html = resp.read().decode("utf-8")
-        m = re.search(re.escape(stock_code) + r"\s+(.+?)\s*-\s*技術分析", html)
-        if m:
-            return m.group(1).strip()
+        for market in ["tse_", "otc_"]:
+            url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={market}{stock_code}.tw&json=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                name = data.get("msgArray", [{}])[0].get("n", "")
+                if name and name != "?":
+                    return name.strip()
     except Exception:
         pass
     return ""
