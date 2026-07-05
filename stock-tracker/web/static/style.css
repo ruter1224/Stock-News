@@ -516,3 +516,12 @@ table.data-table tr:hover { background: var(--gray-100); }
 .card-value.negative {
     color: #16a34a;
 }
+
+.fund-pool-summary {
+    margin-top: 16px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+}

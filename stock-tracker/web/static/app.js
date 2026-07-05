@@ -77,6 +77,23 @@ async function loadDashboard() {
     }
 
     renderPieChart(data.stocks);
+    loadFundPoolSummary();
+}
+
+async function loadFundPoolSummary() {
+    const data = await api('/api/fund-pool');
+    if (!data) return;
+
+    const summaryEl = document.getElementById('fund-pool-summary');
+    if (summaryEl) summaryEl.style.display = 'block';
+
+    document.getElementById('fp-initial-summary').textContent = '$' + fmt(data.initial_capital);
+    document.getElementById('fp-total-summary').textContent = '$' + fmt(data.total_value);
+    document.getElementById('fp-cash-summary').textContent = '$' + fmt(data.cash_balance);
+
+    const rateEl = document.getElementById('fp-rate-summary');
+    rateEl.textContent = fmtPL(data.growth_rate) + '%';
+    rateEl.className = 'card-value small ' + getGrowthColor(data.growth_rate);
 }
 
 function renderPieChart(stocks) {
