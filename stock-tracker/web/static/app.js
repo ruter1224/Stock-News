@@ -77,24 +77,31 @@ async function loadDashboard() {
     }
 
     renderPieChart(data.stocks);
-    loadFundPoolSummary();
+    loadInitialCapital();
 }
 
-async function loadFundPoolSummary() {
+async function loadInitialCapital() {
     const data = await api('/api/fund-pool');
     if (!data) return;
-
-    const summaryEl = document.getElementById('fund-pool-summary');
-    if (summaryEl) summaryEl.style.display = 'block';
-
-    document.getElementById('fp-initial-summary').textContent = '$' + fmt(data.initial_capital);
-    document.getElementById('fp-total-summary').textContent = '$' + fmt(data.total_value);
-    document.getElementById('fp-cash-summary').textContent = '$' + fmt(data.cash_balance);
-
-    const rateEl = document.getElementById('fp-rate-summary');
-    rateEl.textContent = fmtPL(data.growth_rate) + '%';
-    rateEl.className = 'card-value small ' + getGrowthColor(data.growth_rate);
+    document.getElementById('d-initial-capital').textContent = '$' + fmt(data.initial_capital);
 }
+
+// [保留] loadFundPoolSummary() - 總覽頁資金池摘要（已停用）
+// async function loadFundPoolSummary() {
+//     const data = await api('/api/fund-pool');
+//     if (!data) return;
+//
+//     const summaryEl = document.getElementById('fund-pool-summary');
+//     if (summaryEl) summaryEl.style.display = 'block';
+//
+//     document.getElementById('fp-initial-summary').textContent = '$' + fmt(data.initial_capital);
+//     document.getElementById('fp-total-summary').textContent = '$' + fmt(data.total_value);
+//     document.getElementById('fp-cash-summary').textContent = '$' + fmt(data.cash_balance);
+//
+//     const rateEl = document.getElementById('fp-rate-summary');
+//     rateEl.textContent = fmtPL(data.growth_rate) + '%';
+//     rateEl.className = 'card-value small ' + getGrowthColor(data.growth_rate);
+// }
 
 function renderPieChart(stocks) {
     const total = stocks.reduce((s, x) => s + x.market_value, 0);
@@ -982,6 +989,29 @@ function showSnapshotDialog() {
             }
         });
 }
+
+// ====== Connection Status ======
+function updateConnectionStatus() {
+    const statusEl = document.getElementById('connection-status');
+    if (!statusEl) return;
+
+    fetch('/api/portfolio', { method: 'HEAD' })
+        .then(res => {
+            if (res.ok) {
+                statusEl.className = 'connection-status online';
+                statusEl.innerHTML = '<span class="status-dot"></span>連線中';
+            } else {
+                throw new Error('Server error');
+            }
+        })
+        .catch(() => {
+            statusEl.className = 'connection-status offline';
+            statusEl.innerHTML = '<span class="status-dot"></span>離線';
+        });
+}
+
+setInterval(updateConnectionStatus, 30000);
+updateConnectionStatus();
 
 // ====== Init ======
 const savedTab = localStorage.getItem('activeTab') || 'dashboard';

@@ -4,34 +4,16 @@
 
 <div id="dashboard-cards" class="card-grid">
     <div class="card"><div class="card-label">持股檔數</div><div class="card-value" id="d-count">-</div></div>
-    <div class="card"><div class="card-label">投資總值</div><div class="card-value primary" id="d-investment-total">-</div></div>
+    <div class="card">
+        <div class="card-label">投資總值 / 初始本金</div>
+        <div style="font-size:18px;font-weight:700">
+            <span class="card-value primary" id="d-investment-total">-</span>
+            <span style="color:var(--gray-400);font-weight:400"> / </span>
+            <span style="color:var(--gray-600);font-size:16px" id="d-initial-capital">$0</span>
+        </div>
+    </div>
     <div class="card"><div class="card-label">總損益</div><div class="card-value" id="d-pl">-</div></div>
     <div class="card"><div class="card-label">總報酬率</div><div class="card-value" id="d-roi">-</div></div>
-</div>
-
-<div id="fund-pool-summary" class="fund-pool-summary" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:600;color:var(--gray-800)">&#x1F4B0; 資金池總覽</div>
-        <button class="btn btn-sm btn-gray" onclick="switchTab('fund_pool')">詳細 &#x2192;</button>
-    </div>
-    <div class="card-grid-4">
-        <div class="card">
-            <div class="card-label">初始本金</div>
-            <div class="card-value small" id="fp-initial-summary">$0</div>
-        </div>
-        <div class="card">
-            <div class="card-label">目前總值</div>
-            <div class="card-value small" id="fp-total-summary">$0</div>
-        </div>
-        <div class="card">
-            <div class="card-label">成長率</div>
-            <div class="card-value small" id="fp-rate-summary">0%</div>
-        </div>
-        <div class="card">
-            <div class="card-label">可用現金</div>
-            <div class="card-value small" id="fp-cash-summary">$0</div>
-        </div>
-    </div>
 </div>
 
 <div class="action-bar">
@@ -196,7 +178,7 @@
         <div class="card-value" id="fp-rate">0%</div>
     </div>
     <div class="card">
-        <div class="card-label">可用現金</div>
+        <div class="card-label">可用現金（預估）</div>
         <div class="card-value" id="fp-cash">$0</div>
     </div>
 </div>
