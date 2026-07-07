@@ -326,12 +326,6 @@ def _print_report(rep, tag=""):
     print()
 
 
-def cmd_gui(args):
-    from gui.app import App
-    app = App()
-    app.mainloop()
-
-
 def cmd_web(args):
     import os
     import webbrowser
@@ -429,8 +423,6 @@ def main():
     p_hold_remove.add_argument("--confirm", action="store_true", help="確認刪除")
     p_hold_remove.add_argument("--filepath", "-f", help="狀態檔案路徑")
 
-    p_gui = sub.add_parser("gui", help="啟動圖形介面 (Tkinter)")
-
     p_web = sub.add_parser("web", help="啟動網頁圖形介面 (Flask)")
     p_web.add_argument("--port", "-p", type=int, default=5000, help="監聽埠號 (預設 5000)")
     p_web.add_argument("--debug", "-d", action="store_true", help="除錯模式")
@@ -446,7 +438,6 @@ def main():
         "refresh": cmd_refresh,
         "list": cmd_list,
         "holding": _dispatch_holding,
-        "gui": cmd_gui,
         "web": cmd_web,
     }
     dispatch[args.command](args)

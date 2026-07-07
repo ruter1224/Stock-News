@@ -48,7 +48,7 @@ async function loadDashboard() {
     if (!data) return;
 
     document.getElementById('d-count').textContent = data.count;
-    document.getElementById('d-investment-total').textContent = '$' + fmt(data.investment_total);
+    document.getElementById('d-investment-total').textContent = '$' + fmt(data.total_value);
     const plEl = document.getElementById('d-pl');
     plEl.textContent = '$' + fmtPL(data.total_pl);
     plEl.className = 'card-value ' + (data.total_pl >= 0 ? 'positive' : 'negative');
@@ -76,14 +76,9 @@ async function loadDashboard() {
         tbody.appendChild(tr);
     }
 
-    renderPieChart(data.stocks);
-    loadInitialCapital();
-}
+    document.getElementById('d-initial-capital').textContent = '$' + fmt(data.total_cost);
 
-async function loadInitialCapital() {
-    const data = await api('/api/fund-pool');
-    if (!data) return;
-    document.getElementById('d-initial-capital').textContent = '$' + fmt(data.initial_capital);
+    renderPieChart(data.stocks);
 }
 
 // [保留] loadFundPoolSummary() - 總覽頁資金池摘要（已停用）

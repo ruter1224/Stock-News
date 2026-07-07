@@ -511,18 +511,17 @@ def _fund_pool_calc():
     cash_balance = calculate_cash_balance(portfolio)
 
     portfolio_value = 0.0
-    for code in portfolio.stock_codes:
+    for code in portfolio.active_stock_codes:
         price, _ = _get_cached_price(code)
         if price:
             state = portfolio.get_state(code)
             portfolio_value += price * state.shares
 
-    total_value = cash_balance + portfolio_value
+    total_value = portfolio_value
     initial_capital = 0.0
-    for state in portfolio.stocks.values():
-        for tx in state.history:
-            if tx.action == "init":
-                initial_capital += tx.total_amount
+    for code in portfolio.active_stock_codes:
+        state = portfolio.get_state(code)
+        initial_capital += state.total_cost
 
     growth_amount = total_value - initial_capital
     growth_rate = (growth_amount / initial_capital * 100) if initial_capital > 0 else 0.0

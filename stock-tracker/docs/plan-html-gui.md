@@ -1,5 +1,9 @@
 # Plan: Tkinter → Flask + HTML GUI 改造
 
+> **狀態**: ✅ 已完成 (Web GUI 已取代 Tkinter)
+> **更新 (2026-07-07)**: `gui/` 目錄保留原始碼，`main.py` 已移除 `gui` 子命令
+> 設計模式萃取 → `../../docs/legacy-gui-patterns.md`
+
 ## 當前狀態（2026-06-29）
 
 ### 專案架構

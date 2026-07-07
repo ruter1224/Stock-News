@@ -1,7 +1,7 @@
 # 資金池功能實作計畫
 
 **日期**: 2026-07-04  
-**狀態**: 待確認  
+**狀態**: 已完成 (2026-07-07 確認結案)  
 **分支**: feature/fund-pool
 
 ---
@@ -971,12 +971,12 @@ async function importAll() {
 
 ---
 
-## 9. 待確認事項
+## 9. 待確認事項（已確認）
 
-- [ ] 視覺呈現組合方案（摘要卡片 + 迷你圖表）是否 OK
-- [ ] 匯出檔名格式：`StockTracker_trades_YYYY-MM-DD.csv` + `StockTracker_fundpool_YYYY-MM-DD.csv`
-- [ ] 匯入時是否強制要求兩筆檔案同時存在
+- [x] 視覺呈現組合方案（摘要卡片 + 迷你圖表）— OK
+- [x] 匯出檔名格式：`StockTracker_trades_YYYY-MM-DD.csv` + `StockTracker_fundpool_YYYY-MM-DD.csv`
+- [x] 匯入時是否強制要求兩筆檔案同時存在 — 不強制，分開匯入也可（匯出時各自獨立）
 
 ---
 
-**狀態**: 待確認後開始實作
+**狀態**: ✅ 已完成 (2026-07-07 結案)
